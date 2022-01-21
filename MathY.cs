@@ -22,9 +22,17 @@ public static class MathY{
 	// *** Binary operations:
 	// § Comparisons:
 	public enum COMP{SAME, LESS, MORE};
-	public COMP Compare(NX A, NX B){
+	public static COMP Compare(NX A, NX B){
 		(int L, int H) = PowerBounds(A, B);
-		
+		for(int i = H; i >= L; i--){
+			int DigitA = A.NumAtPow(i);
+			int DigitB = B.NumAtPow(i);
+			if(DigitA != DigitB){
+				if(DigitA > DigitB){return COMP.MORE;}
+				else{return COMP.LESS;}
+			}
+		}
+		return COMP.SAME;
 	}
 	// § Numeric:
 	// *** Helpers:
