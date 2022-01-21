@@ -1,6 +1,6 @@
 # NX
 
-NX is a c# library for storing and manipulating numbers with arbitrary precision and in different bases.
+NX is a C# library for storing and manipulating numbers with arbitrary precision and in different bases.
 
 ## String Syntax
 
