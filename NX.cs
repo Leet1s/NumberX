@@ -28,7 +28,7 @@ public class NX{
 	public static NX New(in string Num){
 		// ¶ Safeguard (Checks for correct usage of syntax):
 		if(!RE.IsMatch(Num)){
-			Console.Error.WriteLine("Error:\n\tThe creation of a NX was attempted and failed: Syntax error.");
+			Console.Error.WriteLine("\tError:\nThe creation of a NX was attempted and failed: Syntax error.");
 			return null!;
 		}
 		// ¶ Init:
@@ -46,7 +46,7 @@ public class NX{
 	public static NX New(double Num, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
-			Console.Error.WriteLine("Error:\n\tAttempted to create a NX with an invalid base!");
+			Console.Error.WriteLine("\tError:\nAttempted to create a NX with an invalid base!");
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
@@ -68,7 +68,7 @@ public class NX{
 	public static NX New(long Num, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
-			Console.Error.WriteLine("Error:\n\tAttempted to create a NX with an invalid base!");
+			Console.Error.WriteLine("\tError:\nAttempted to create a NX with an invalid base!");
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
@@ -83,10 +83,12 @@ public class NX{
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
-		Console.WriteLine("Warning:\n\tThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
+		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
 	//TODO *** Operator methods:
+	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
+	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
 	//TODO *** Conversion casting:
 	// *** Miscellaneous methods:
 	// § Visualization:
@@ -95,7 +97,7 @@ public class NX{
 	}
 	public string ToStrB62(in bool BEndian = true){
 		if(this.Base > 62){
-			Console.Error.WriteLine("Error:\n\tAttempted to write a NX with a base outside of the B62's range!");
+			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B62's range!");
 			return "";
 		}
 		// ¶ Endianness indicator:
@@ -171,7 +173,7 @@ public class NX{
 	private static short[] ToNums(long Value, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
-			Console.Error.WriteLine("Atempted to convert a number at an invalid base.");
+			Console.Error.WriteLine("\tError:\nAtempted to convert a number at an invalid base.");
 			return new short[]{0};
 		}
 		// ¶ Init:
