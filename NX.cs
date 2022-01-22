@@ -86,6 +86,7 @@ public class NX{
 		Console.WriteLine("Warning:\n\tThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
 	//TODO *** Operator methods:
+	public static NX operator -(NX Num) => MathY.Negate(Num);
 	//TODO *** Conversion casting:
 	// *** Miscellaneous methods:
 	// § Visualization:
