@@ -115,10 +115,10 @@ public class NX{
 		short[] Pow = ToNums(this.Powr, this.Base);
 		if(BEndian)
 			for(int i = Pow.Length; --i >= 0;)
-				Str  += B62[Pow[i]];
+				Str += B62[Pow[i]];
 		else
 			for(int i = 0; i < Pow.Length; i++)
-				Str  += B62[Pow[i]];
+				Str += B62[Pow[i]];
 		// Return:
 		return Str;
 	}
