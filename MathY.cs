@@ -2,10 +2,10 @@
 
 public static class MathY{
 	// *** Basic numbers:
-	public static NX ZERO    = new NX(false, new sbyte[]{0}, 0, 0);
-	public static NX ONE     = new NX(false, new sbyte[]{1}, 0, 0);
-	public static NX TWO     = new NX(false, new sbyte[]{2}, 0, 0);
-	public static NX BASE_ID = new NX(false, new sbyte[]{0, 1}, 0, 0);
+	public static NX ZERO    = new NX(false, new short[]{0}, 0, 0);
+	public static NX ONE     = new NX(false, new short[]{1}, 0, 0);
+	public static NX TWO     = new NX(false, new short[]{2}, 0, 0);
+	public static NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
 	// *** Unary operations:
 	private static NX Based(NX Num, in byte Base){
 		Num.Base = Base;
@@ -22,9 +22,9 @@ public static class MathY{
 	// *** Binary operations:
 	// § Comparisons:
 	public enum COMP{SAME, LESS, MORE};
-	public static COMP Compare(NX A, NX B){
-		(int L, int H) = PowerBounds(A, B);
-		for(int i = H; i >= L; i--){
+	public static COMP Compare(in NX A, in NX B){
+		(int LB, int HB) = PowerBounds(A, B);
+		for(int i = HB; i >= LB; i--){
 			int DigitA = A.NumAtPow(i);
 			int DigitB = B.NumAtPow(i);
 			if(DigitA != DigitB){
@@ -35,11 +35,47 @@ public static class MathY{
 		return COMP.SAME;
 	}
 	// § Numeric:
+	public static NX Sum(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A.Base != B.Base){
+			Console.Error.WriteLine("Error:\n\tAn addition of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Init:
+		(int LB, int HB) = PowerBounds(A, B);
+		NX C = new NX(
+			false,
+			new short[HB - LB +2],
+			A.Base,
+			LB
+		);
+		int ASign = A.Sign ? -1 : 1;
+		int BSign = B.Sign ? -1 : 1;
+		// ¶ Summation:
+		for(int i = 0; i < C.Len() -1; i++){C.Nums[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.Nums[LB + i]);}
+		// ¶ Checks:
+		for(int i = C.Len() -1; i-- >= 0;){
+			if(C.Nums[i] < 0){
+				C.Sign = true;
+				break;
+			} else if(C.Nums[i] > 0){break;}
+		}
+		if(C.Sign){for(int i = 0; i < C.Len(); i++){C.Nums[i] *= -1;}}
+		CBCleanUp(ref C);
+		// Return
+		return C;
+	}
 	// *** Helpers:
-	private static (int, int) PowerBounds(NX Num) => (Num.Powr, Num.Powr + Num.Len());
-	private static (int, int) PowerBounds(NX A, NX B){
+	private static (int, int) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len());
+	private static (int, int) PowerBounds(in NX A, in NX B){
 		int LBound = Math.Min(A.Powr, B.Powr);
 		int HBound = Math.Max(A.Powr + A.Len() -1, B.Powr + B.Len() -1);
 		return (LBound, HBound);
+	}
+	// * Clean-up with Carry and Borrow
+	private static void CBCleanUp(ref NX Num){
+		while(Num.IsOverLoaded()){
+			// TODO
+		}
 	}
 }

@@ -7,7 +7,7 @@ public class NX{
 	internal volatile static ushort     PRECISION  = 32;
 	// § Regex:
 	private const string B62     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	private const string Pattern = @"^(?<ord>[<>])(?<sign>[+-])?(?<nums>(?<nBC>[0-9a-zA-Z]*)[,\.]?(?<nAC>[0-9a-zA-Z]*))(?<base>\*[@2-9a-zA-Z])(?<powr>\^[+-]?[0-9a-zA-Z]+)?$";
+	private const string Pattern = @"^(?<ord>[<>])(?<sign>[+-])?(?<nums>(?<nBC>[0-9a-zA-Z]*)[,\.]?(?<nAC>[0-9a-zA-Z]*))(?<base>\*[2-9a-zA-Z])(?<powr>\^[+-]?[0-9a-zA-Z]+)?$";
 	private static Regex RE      = new Regex(Pattern);
 	// *** Self attributes:
 	// § Number properties:
@@ -190,8 +190,13 @@ public class NX{
 		if(Pow < this.Powr || Pow >= this.Powr + this.Len()){return 0;}
 		return this.Nums[Pow - this.Powr];
 	}
+	internal short Index(in int Index){
+		if(Index < 0 || Index >= this.Len()){return 0;}
+		return this.Nums[Index];
+	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
 		return false;
 	}
+	
 }
