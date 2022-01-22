@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 public class NX{
 	// *** Global:
-	protected volatile static ushort PRECISION = 32;
+	internal volatile static ushort     PRECISION  = 32;
 	// § Regex:
 	private const string B62     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	private const string Pattern = @"^(?<ord>[<>])(?<sign>[+-])?(?<nums>(?<nBC>[0-9a-zA-Z]*)[,\.]?(?<nAC>[0-9a-zA-Z]*))(?<base>\*[@2-9a-zA-Z])(?<powr>\^[+-]?[0-9a-zA-Z]+)?$";
@@ -12,44 +12,51 @@ public class NX{
 	// *** Self attributes:
 	// § Number properties:
 	internal bool    Sign = false;
-	internal sbyte[] Nums = {0};
+	internal short[] Nums = {0};
 	internal byte    Base = 2;
 	internal int     Powr = 0;
+	// *** Raw constructors:
+	internal NX(in bool Sign, in short[] Digits, in byte Base, in int Power){
+		this.Sign = Sign;
+		this.Nums = Digits;
+		this.Base = Base;
+		this.Powr = Power;
+	}
+	internal NX(){}
 	// *** Builder:
 	// * String B62 Builder
-	public static NX? New(in string Num){
+	public static NX New(in string Num){
 		// ¶ Safeguard (Checks for correct usage of syntax):
 		if(!RE.IsMatch(Num)){
-			Console.Error.WriteLine("The creation of a NX was attempted and failed: Syntax error.");
-			return null;
+			Console.Error.WriteLine("Error:\n\tThe creation of a NX was attempted and failed: Syntax error.");
+			return null!;
 		}
 		// ¶ Init:
 		var  Elements = RE.Match(Num).Groups;
 		bool isBE     = ">".Equals(Elements[1].ToString());
 		// ¶ Creates the raw values for the new NX:
 		bool    Sign = StrSign(Elements[2].ToString());
-		sbyte[] Nums = StrNums(Elements[4].ToString() + Elements[5].ToString(), isBE);
+		short[] Nums = StrNums(Elements[4].ToString() + Elements[5].ToString(), isBE);
 		byte    Base = (byte) B62.IndexOf(Elements[6].ToString()[1]);
 		int     Powr = StrPowr(Elements[7].ToString(),  Elements[3].ToString(), Base, isBE);
 		// Return:
 		return new NX(Sign, Nums, Base, Powr);
 	}
 	// * Floating point builder
-	public static NX? New(double Num, in byte Base = 2){
+	public static NX New(double Num, in byte Base = 2){
 		// ¶ Safeguard:
-		if(Base is < 2 or > 62){
-			Console.Error.WriteLine("The creation of a NX was attempted and failed: Requested base out of range.");
-			return null;
-			}
+		if(Base < 2){
+			Console.Error.WriteLine("Error:\n\tAttempted to create a NX with an invalid base!");
+		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
 		Num          = Math.Abs(Num);
-		sbyte[] Nums = new sbyte[PRECISION];
+		short[] Nums = new short[PRECISION];
 		// ¶ Conversion:
 		int j   = Nums.Length;
 		int Pow = (int)(Math.Log2(Num) / Math.Log2(Base));
 		for(int i = Pow; i > Pow - PRECISION; i--){
-			sbyte Temp = (sbyte)(Num / Math.Pow(Base, i));
+			short Temp = (short)(Num / Math.Pow(Base, i));
 			Num       -= Temp * Math.Pow(Base, i);
 			Nums[--j]  = Temp;
 		}
@@ -58,24 +65,16 @@ public class NX{
 		return new NX(Sign, Nums, Base, Powr);
 	}
 	// * Integer builder
-	public static NX? New(long Num, in byte Base = 2){
+	public static NX New(long Num, in byte Base = 2){
 		// ¶ Safeguard:
-		if(Base is < 2 or > 62){
-			Console.Error.WriteLine("The creation of a NX was attempted and failed: Requested base out of range.");
-			return null;
+		if(Base < 2){
+			Console.Error.WriteLine("Error:\n\tAttempted to create a NX with an invalid base!");
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		sbyte[] Nums = ToNums(Num, Base);
+		short[] Nums = ToNums(Num, Base);
 		// Return:
 		return new NX(Sign, Nums, Base, 0);
-	}
-	// § Raw constructor:
-	internal NX(in bool Sign, in sbyte[] Digits, in byte Base, in int Power){
-		this.Sign = Sign;
-		this.Nums = Digits;
-		this.Base = Base;
-		this.Powr = Power;
 	}
 	// *** Getters & Setters:
 	// § Getters:
@@ -85,10 +84,19 @@ public class NX{
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
 		Console.WriteLine("Warning:\n\tThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
-		}
+	}
+	//TODO *** Operator methods:
+	//TODO *** Conversion casting:
 	// *** Miscellaneous methods:
 	// § Visualization:
-	public string ToStrStd(in bool BEndian = false){
+	public override string ToString(){
+		return this.ToStrB62();
+	}
+	public string ToStrB62(in bool BEndian = true){
+		if(this.Base > 62){
+			Console.Error.WriteLine("Error:\n\tAttempted to write a NX with a base outside of the B62's range!");
+			return "";
+		}
 		// ¶ Endianness indicator:
 		string Str = BEndian ? ">" : "<";
 		// ¶ Sign indicator:
@@ -104,7 +112,7 @@ public class NX{
 		Str += '*' + B62[this.Base];
 		// ¶ Power indicator:
 		Str += '^' + this.Powr < 0 ? '-' : '+';
-		sbyte[] Pow = ToNums(this.Powr, this.Base);
+		short[] Pow = ToNums(this.Powr, this.Base);
 		if(BEndian)
 			for(int i = Pow.Length; --i >= 0;)
 				Str  += B62[Pow[i]];
@@ -116,14 +124,14 @@ public class NX{
 	}
 	// § Helper Functions:
 	private static bool StrSign(in string Sign) => "-".Equals(Sign);
-	private static sbyte[] StrNums(string Digits, in bool BEndian){
+	private static short[] StrNums(string Digits, in bool BEndian){
 		// ¶ Safeguard:
-		if(Digits == null){return new sbyte[1]{0};}
+		if(Digits == null){return new short[1]{0};}
 		// ¶ Init:
-		sbyte[] Nums = new sbyte[Digits.Length];
+		short[] Nums = new short[Digits.Length];
 		if(BEndian){Digits = (string) Digits.Reverse();}
 		// ¶ Decoding:
-		for(int i = 0; i < Nums.Length; i++){Nums[i] = (sbyte) B62.IndexOf(Digits[i]);}
+		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short) B62.IndexOf(Digits[i]);}
 		// Return:
 		return Nums;
 	}
@@ -159,27 +167,31 @@ public class NX{
 		}
 		return Pow;
 	}
-	private static sbyte[] ToNums(long Value, in byte Base = 2){
+	private static short[] ToNums(long Value, in byte Base = 2){
 		// ¶ Safeguard:
-		if(Base is < 2 or > 62){
-			Console.Error.WriteLine("Atempted to convert a number at an invalid base range.");
-			return new sbyte[]{0};
+		if(Base < 2){
+			Console.Error.WriteLine("Atempted to convert a number at an invalid base.");
+			return new short[]{0};
 		}
 		// ¶ Init:
 		Value        = Math.Abs(Value);
 		int     Pow  = (int)(Math.Log2(Value) / Math.Log2(Base));
-		sbyte[] Nums = new sbyte[Pow +1];
+		short[] Nums = new short[Pow +1];
 		// ¶ Convertion:
 		for(int i = Pow; i >= 0; i--){
-			sbyte Temp = (sbyte)(Value / Math.Pow(Base, i));
+			short Temp = (short)(Value / Math.Pow(Base, i));
 			Value     -= (long)  (Temp * Math.Pow(Base, i));
 			Nums[i]    = Temp;
 		}
 		// Return:
 		return Nums;
 	}
-	internal sbyte NumAtPow(int Pow){
+	internal short NumAtPow(in int Pow){
 		if(Pow < this.Powr || Pow >= this.Powr + this.Len()){return 0;}
 		return this.Nums[Pow - this.Powr];
+	}
+	internal bool IsOverLoaded(){
+		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
+		return false;
 	}
 }
