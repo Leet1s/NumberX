@@ -201,5 +201,17 @@ public class NX{
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
 		return false;
 	}
-	
+	// *** Cleaners:
+	public void CBCleanUp(){
+		while(Num.IsOverLoaded()){
+			// TODO
+		}
+	}
+	public void Simplify(){
+		int L = 0;
+		int R = this.Len() -1;
+		while(this.Nums[L] == 0 && L <= R){L++;}
+		while(this.Nums[R] == 0 && R > L){R--;}
+		this.Nums = Nums[L..(R +1)];
+	}
 }

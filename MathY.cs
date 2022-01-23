@@ -72,10 +72,4 @@ public static class MathY{
 		int HBound = Math.Max(A.Powr + A.Len() -1, B.Powr + B.Len() -1);
 		return (LBound, HBound);
 	}
-	// * Clean-up with Carry and Borrow
-	private static void CBCleanUp(ref NX Num){
-		while(Num.IsOverLoaded()){
-			// TODO
-		}
-	}
 }
