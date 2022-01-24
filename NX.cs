@@ -198,7 +198,6 @@ public class NX{
 		return Nums;
 	}
 	internal short NumAtPow(in int Pow){
-		if(Pow < this.Powr || Pow >= this.Powr + this.Len()){return 0;}
 		return this[Pow - this.Powr];
 	}
 	internal bool IsOverLoaded(){
