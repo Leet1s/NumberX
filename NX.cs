@@ -203,7 +203,7 @@ public class NX{
 	}
 	// *** Cleaners:
 	public void CBCleanUp(){
-		while(Num.IsOverLoaded()){
+		while(this.IsOverLoaded()){
 			// TODO
 		}
 	}
