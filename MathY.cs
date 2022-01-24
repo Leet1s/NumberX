@@ -61,7 +61,7 @@ public static class MathY{
 			} else if(C.Nums[i] > 0){break;}
 		}
 		if(C.Sign){for(int i = 0; i < C.Len(); i++){C.Nums[i] *= -1;}}
-		CBCleanUp(ref C);
+		C.CBCleanUp();
 		// Return
 		return C;
 	}
