@@ -208,7 +208,15 @@ public class NX{
 	// *** Cleaners:
 	public void CBCleanUp(){
 		while(this.IsOverLoaded()){
-			// TODO
+			for(int i = 0; i < this.Len(); i++){
+				if(this[i] >= this.Base){
+					this[i +1] += (short)(this[i] / this.Base);
+					this[i]     = (short)(this[i] % this.Base);
+				} else if(this[i] < 0){
+					this[i +1] -= (short)(this[i] / this.Base +1);
+					this[i]     = (short)(this[i] % this.Base);
+				}
+			}
 		}
 	}
 	public void Simplify(){
