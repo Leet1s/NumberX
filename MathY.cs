@@ -52,15 +52,15 @@ public static class MathY{
 		int ASign = A.Sign ? -1 : 1;
 		int BSign = B.Sign ? -1 : 1;
 		// ¶ Summation:
-		for(int i = 0; i < C.Len() -1; i++){C.Nums[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.Nums[LB + i]);}
+		for(int i = 0; i < C.Len() -1; i++){C[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.NumAtPow(LB + i));}
 		// ¶ Checks:
 		for(int i = C.Len() -1; i-- >= 0;){
-			if(C.Nums[i] < 0){
+			if(C[i] < 0){
 				C.Sign = true;
 				break;
-			} else if(C.Nums[i] > 0){break;}
+			} else if(C[i] > 0){break;}
 		}
-		if(C.Sign){for(int i = 0; i < C.Len(); i++){C.Nums[i] *= -1;}}
+		if(C.Sign){for(int i = 0; i < C.Len(); i++){C[i] *= -1;}}
 		C.CBCleanUp();
 		// Return
 		return C;

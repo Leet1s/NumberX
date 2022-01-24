@@ -80,6 +80,11 @@ public class NX{
 	// § Getters:
 	public int Len() => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
+	// * Indexer
+	public short this[int i]{
+		get => this.Nums[i];
+		set => this.Nums[i] = value;
+	}
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
@@ -106,11 +111,11 @@ public class NX{
 		Str += this.Sign ? '-' : '+';
 		// ¶ Digits sequence:
 		if(BEndian)
-			for(int i = this.Nums.Length; --i >= 0;)
-				Str  += B62[this.Nums[i]];
+			for(int i = this.Len(); --i >= 0;)
+				Str  += B62[this[i]];
 		else
-			for(int i = 0; i < this.Nums.Length; i++)
-				Str  += B62[this.Nums[i]];
+			for(int i = 0; i < this.Len(); i++)
+				Str  += B62[this[i]];
 		// ¶ Base indicator:
 		Str += '*' + B62[this.Base];
 		// ¶ Power indicator:
@@ -191,11 +196,11 @@ public class NX{
 	}
 	internal short NumAtPow(in int Pow){
 		if(Pow < this.Powr || Pow >= this.Powr + this.Len()){return 0;}
-		return this.Nums[Pow - this.Powr];
+		return this[Pow - this.Powr];
 	}
 	internal short Index(in int Index){
 		if(Index < 0 || Index >= this.Len()){return 0;}
-		return this.Nums[Index];
+		return this[Index];
 	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
@@ -212,6 +217,6 @@ public class NX{
 		int R = this.Len() -1;
 		while(this.Nums[L] == 0 && L <= R){L++;}
 		while(this.Nums[R] == 0 && R > L){R--;}
-		this.Nums = Nums[L..(R +1)];
+		this.Nums = this.Nums[L..(R +1)];
 	}
 }
