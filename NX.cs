@@ -81,9 +81,12 @@ public class NX{
 	public int Len() => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
 	// * Indexer
-	public short this[int i]{
-		get => this.Nums[i];
-		set => this.Nums[i] = value;
+	public short this[int Index]{
+		get{
+			if(Index < 0 || Index >= this.Len()){return 0;}
+			return this.Nums[Index];
+		}
+		set => this.Nums[Index] = value;
 	}
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
@@ -197,10 +200,6 @@ public class NX{
 	internal short NumAtPow(in int Pow){
 		if(Pow < this.Powr || Pow >= this.Powr + this.Len()){return 0;}
 		return this[Pow - this.Powr];
-	}
-	internal short Index(in int Index){
-		if(Index < 0 || Index >= this.Len()){return 0;}
-		return this[Index];
 	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
