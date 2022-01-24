@@ -35,7 +35,7 @@ public static class MathY{
 		return COMP.SAME;
 	}
 	// § Numeric:
-	public static NX Sum(in NX A, in NX B){
+	public static NX Sum(NX A, NX B){
 		// ¶ Safeguard:
 		if(A.Base != B.Base){
 			Console.Error.WriteLine("Error:\n\tAn addition of numbers with different bases was attempted!");
@@ -52,7 +52,9 @@ public static class MathY{
 		int ASign = A.Sign ? -1 : 1;
 		int BSign = B.Sign ? -1 : 1;
 		// ¶ Summation:
-		for(int i = 0; i < C.Len() -1; i++){C[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.NumAtPow(LB + i));}
+		Parallel.For(0, C.Len(), i => {
+			C[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.NumAtPow(LB + i));
+		});
 		// ¶ Checks:
 		for(int i = C.Len() -1; i-- >= 0;){
 			if(C[i] < 0){
