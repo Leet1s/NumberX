@@ -87,6 +87,7 @@ public static class MathY{
 		}
 		if(C.Sign){for(int i = 0; i < C.Len(); i++){C[i] *= -1;}}
 		C.CBCleanUp();
+		C.Simplify();
 		// Return
 		return C;
 	}
@@ -104,7 +105,7 @@ public static class MathY{
 			A.Powr + B.Powr
 		);
 		// ¶ Multiplication:
-		for(int i = 0; i < B.Len(); i++){C += NX.ShiftPow(SingleMul(A, B[i]), i + B.Powr);}
+		for(int i = 0; i < B.Len(); i++){C += SingleMul(A, B[i]).ShiftPow(i + B.Powr);}
 		// Return:
 		return C;
 	}
@@ -116,6 +117,21 @@ public static class MathY{
 		}
 		// ¶ Init:
 		MatchLength(ref A, ref B);
+		// Base Case:
+		if(A.Len() == 1){return SingleMul(A, B[0]);}
+		// ¶ Init
+		(NX A_L, NX A_H) = SplitHalf(A);
+		(NX B_L, NX B_H) = SplitHalf(B);
+		// ¶ Recursive calls:
+		NX L = MulAK(A_L,  B_L);
+		NX M = MulAK(A_L + B_H, A_H + B_L);
+		NX H = MulAK(A_H,  B_H);
+		// Return:
+		return 
+			(L 
+			+ (M - L - H).ShiftPow(A.Len() / 2) 
+			+ H.ShiftPow(A.Len())
+			).ShiftPow(A.Powr + B.Powr);
 	}
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
@@ -134,13 +150,14 @@ public static class MathY{
 		return Total;
 	}
 	// *** Helpers:
-	private static (int, int) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len() -1);
-	private static (int, int) PowerBounds(in NX A, in NX B){
+	private static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len() -1);
+	private static (int LB, int HB) PowerBounds(in NX A, in NX B){
 		int LBound = Math.Min(A.Powr, B.Powr);
 		int HBound = Math.Max(A.Powr + A.Len() -1, B.Powr + B.Len() -1);
 		return (LBound, HBound);
 	}
 	private static NX SingleMul(NX Num, in short Fac){
+		Num.Nums = Num[0 .. (Num.Len() +1)];
 		for(int i = 0; i < Num.Len(); i++){Num[i] *= Fac;}
 		Num.CBCleanUp();
 		return Num;
@@ -148,5 +165,21 @@ public static class MathY{
 	private static void MatchLength(ref NX A, ref NX B){
 		if(A.Len() >= B.Len()){B.Nums = B[0 .. A.Len()];}
 		else{A.Nums = A[0 .. B.Len()];}
+	}
+	private static (NX, NX) SplitHalf(NX Num){
+		int Mid = Num.Len() / 2;
+		NX  LH  = new NX(
+			Num.Sign,
+			Num[0 .. (Mid +1)],
+			Num.Base,
+			0
+		);
+		NX  HH  = new NX(
+			Num.Sign,
+			Num[Mid .. ^0],
+			Num.Base,
+			0
+		);
+		return (LH, HH);
 	}
 }

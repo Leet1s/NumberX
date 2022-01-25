@@ -255,9 +255,10 @@ public class NX{
 	internal short NumAtPow(in int Pow){
 		return this[Pow - this.Powr];
 	}
-	internal static NX ShiftPow(NX Num, in int Shift){
-		Num.Powr += Shift;
-		return Num;
+	internal NX ShiftPow(in int Shift){
+		NX Temp    = new NX(this);
+		Temp.Powr += Shift;
+		return Temp;
 	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
