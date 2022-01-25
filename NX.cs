@@ -1,4 +1,4 @@
-﻿namespace NX;
+﻿namespace NumberX;
 
 using System.Text.RegularExpressions;
 
@@ -21,6 +21,12 @@ public class NX{
 		this.Nums = Digits;
 		this.Base = Base;
 		this.Powr = Power;
+	}
+	internal NX(in NX Num){
+		this.Sign = Num.Sign;
+		this.Nums = Num.Nums;
+		this.Base = Num.Base;
+		this.Powr = Num.Powr;
 	}
 	internal NX(){}
 	// *** Builder:
@@ -88,6 +94,14 @@ public class NX{
 		}
 		set => this.Nums[Index] = value;
 	}
+	public short[] this[System.Range Range]{
+		get{
+			short[] Result = new short[Range.End.Value - Range.Start.Value];
+			int j = 0;
+			for(int i = Range.Start.Value; i < Range.End.Value; i++){Result[j++] = this[i];}
+			return Result;
+		}
+	}
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
@@ -97,6 +111,24 @@ public class NX{
 	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
 	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
+	public static NX operator -(NX A, NX B) => MathY.Sum(A, -B);
+	public static NX operator *(NX A, NX B){
+		int Length = A.Len() + B.Len();
+		if(Length > 300){return MathY.MulAK(A, B);}
+		return MathY.MulSB(A, B);
+	}
+	// § Comparators:
+	public static bool operator ==(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
+	public static bool operator !=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
+	public static bool operator  >(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.MORE;
+	public static bool operator  <(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
+	public static bool operator >=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
+	public static bool operator <=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
+	public override bool Equals(object? Obj){
+		if(ReferenceEquals(this, Obj)){return true;}
+		if(ReferenceEquals(Obj, null)){return false;}
+		throw new NotImplementedException();
+	}
 	//TODO *** Conversion casting:
 	// *** Miscellaneous methods:
 	// § Visualization:
@@ -199,6 +231,10 @@ public class NX{
 	}
 	internal short NumAtPow(in int Pow){
 		return this[Pow - this.Powr];
+	}
+	internal static NX ShiftPow(NX Num, in int Shift){
+		Num.Powr += Shift;
+		return Num;
 	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}

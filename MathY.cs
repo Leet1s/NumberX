@@ -1,4 +1,4 @@
-﻿namespace NX;
+﻿namespace NumberX;
 
 public static class MathY{
 	// *** Basic numbers:
@@ -38,7 +38,7 @@ public static class MathY{
 	public static NX Sum(NX A, NX B){
 		// ¶ Safeguard:
 		if(A.Base != B.Base){
-			Console.Error.WriteLine("Error:\n\tAn addition of numbers with different bases was attempted!");
+			Console.Error.WriteLine("\tError:\nAn addition of numbers with different bases was attempted!");
 			return null!;
 		}
 		// ¶ Init:
@@ -67,11 +67,62 @@ public static class MathY{
 		// Return
 		return C;
 	}
+	public static NX MulSB(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A.Base != B.Base){
+			Console.Error.WriteLine("\tError:\nA multiplication of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Init:
+		NX C = new NX(
+			A.Sign ^ B.Sign,
+			new short[A.Len() + B.Len()],
+			A.Base,
+			A.Powr + B.Powr
+		);
+		// ¶ Multiplication:
+		for(int i = 0; i < B.Len(); i++){C += NX.ShiftPow(SingleMul(A, B[i]), i + B.Powr);}
+		// Return:
+		return C;
+	}
+	public static NX MulAK(NX A, NX B){
+		// ¶ Safeguard:
+		if(A.Base != B.Base){
+			Console.Error.WriteLine("\tError:\nA multiplication of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Init:
+		MatchLength(ref A, ref B);
+	}
+	public static NX Summation(in NX[] Numbers){
+		// ¶ Safeguard:
+		for(int i = 0; i < Numbers.Length; i++){
+			if(Numbers[0].Base != Numbers[i].Base){
+				Console.Error.WriteLine("\tError:\nThe summation of numbers with different bases was attempted!");
+				return null!;
+			}
+		}
+		// ¶ Init:
+		NX Total   = new NX();
+		Total.Base = Numbers[0].Base;
+		// ¶ Summation:
+		foreach(NX i in Numbers){Total += i;}
+		// Return:
+		return Total;
+	}
 	// *** Helpers:
-	private static (int, int) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len());
+	private static (int, int) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len() -1);
 	private static (int, int) PowerBounds(in NX A, in NX B){
 		int LBound = Math.Min(A.Powr, B.Powr);
 		int HBound = Math.Max(A.Powr + A.Len() -1, B.Powr + B.Len() -1);
 		return (LBound, HBound);
+	}
+	private static NX SingleMul(NX Num, in short Fac){
+		for(int i = 0; i < Num.Len(); i++){Num[i] *= Fac;}
+		return Num;
+	}
+	private static void MatchLength(ref NX A, ref NX B){
+		if(A.Len() >= B.Len()){B.Nums = B[0 .. A.Len()];}
+		else{A.Nums = A[0 .. B.Len()];}
 	}
 }
