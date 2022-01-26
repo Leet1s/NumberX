@@ -123,11 +123,13 @@ public static class MathY{
 		(NX A_L, NX A_H) = SplitHalf(A);
 		(NX B_L, NX B_H) = SplitHalf(B);
 		// ¶ Recursive calls in parallel:
-		NX L, M, H;
+		NX L = new NX();
+		NX M = new NX();
+		NX H = new NX();
 		Parallel.Invoke(
-			() => AssignL(out L, A_L, B_L),
-			() => AssignM(out M, A_L, B_L, A_H, B_H),
-			() => AssignH(out H, A_H, B_H)
+			() => {L = MulAK(A_L,  B_L);},
+			() => {M = MulAK(A_L + B_H, A_H + B_L);},
+			() => {H = MulAK(A_H,  B_H);}
 		);
 		// Return:
 		return 
@@ -135,10 +137,6 @@ public static class MathY{
 			+ (M - L - H).ShiftPow(A.Len() / 2) 
 			+ H.ShiftPow(A.Len())
 			).ShiftPow(A.Powr + B.Powr);
-		// ¶ Internal helpers:
-		static void AssignL(out NX L, in NX A_L, in NX B_L){L = MulAK(A_L,  B_L);}
-		static void AssignM(out NX M, in NX A_L, in NX B_L, in NX A_H, in NX B_H){M = MulAK(A_L + B_H, A_H + B_L);}
-		static void AssignH(out NX H, in NX A_H, in NX B_H){H = MulAK(A_H,  B_H);}
 	}
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
@@ -149,8 +147,7 @@ public static class MathY{
 			}
 		}
 		// ¶ Init:
-		NX Total   = new NX();
-		Total.Base = Numbers[0].Base;
+		NX Total = new NX{Base = Numbers[0].Base};
 		// ¶ Summation:
 		foreach(NX i in Numbers){Total += i;}
 		// Return:
