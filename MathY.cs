@@ -119,19 +119,26 @@ public static class MathY{
 		MatchLength(ref A, ref B);
 		// Base Case:
 		if(A.Len() == 1){return SingleMul(A, B[0]);}
-		// ¶ Init
+		// ¶ Init:
 		(NX A_L, NX A_H) = SplitHalf(A);
 		(NX B_L, NX B_H) = SplitHalf(B);
-		// ¶ Recursive calls:
-		NX L = MulAK(A_L,  B_L);
-		NX M = MulAK(A_L + B_H, A_H + B_L);
-		NX H = MulAK(A_H,  B_H);
+		// ¶ Recursive calls in parallel:
+		NX L, M, H;
+		Parallel.Invoke(
+			() => AssignL(out L, A_L, B_L),
+			() => AssignM(out M, A_L, B_L, A_H, B_H),
+			() => AssignH(out H, A_H, B_H)
+		);
 		// Return:
 		return 
 			(L 
 			+ (M - L - H).ShiftPow(A.Len() / 2) 
 			+ H.ShiftPow(A.Len())
 			).ShiftPow(A.Powr + B.Powr);
+		// ¶ Internal helpers:
+		static void AssignL(out NX L, in NX A_L, in NX B_L){L = MulAK(A_L,  B_L);}
+		static void AssignM(out NX M, in NX A_L, in NX B_L, in NX A_H, in NX B_H){M = MulAK(A_L + B_H, A_H + B_L);}
+		static void AssignH(out NX H, in NX A_H, in NX B_H){H = MulAK(A_H,  B_H);}
 	}
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
