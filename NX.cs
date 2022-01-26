@@ -125,12 +125,16 @@ public class NX{
 			return Result;
 		}
 	}
+	public short this[Index Index]{
+		get => this[Index.Value];
+		set => this[Index.Value] = value;
+	}
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
 		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
-	//TODO *** Operator methods:
+	// *** Operator methods:
 	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
 	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
@@ -267,6 +271,12 @@ public class NX{
 	// *** Cleaners:
 	public void CBCleanUp(){
 		while(this.IsOverLoaded()){
+			if(this[^0] >= this.Base){this.Nums = this[0 .. (this.Len() +1)];}
+			else if(this[^0] < 0){
+				for(int i = 0; i < this.Len(); i++){this[i] *= -1;}
+				this.CBCleanUp();
+				return;
+			}
 			for(int i = 0; i < this.Len(); i++){
 				if(this[i] >= this.Base){
 					this[i +1] += (short)(this[i] / this.Base);
@@ -283,6 +293,6 @@ public class NX{
 		int R = this.Len() -1;
 		while(this.Nums[L] == 0 && L <= R){L++;}
 		while(this.Nums[R] == 0 && R > L){R--;}
-		this.Nums = this.Nums[L..(R +1)];
+		this.Nums = this.Nums[L .. (R +1)];
 	}
 }

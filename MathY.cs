@@ -68,7 +68,7 @@ public static class MathY{
 		(int LB, int HB) = PowerBounds(A, B);
 		NX C = new NX(
 			false,
-			new short[HB - LB +2],
+			new short[HB - LB +1],
 			A.Base,
 			LB
 		);
@@ -161,7 +161,6 @@ public static class MathY{
 		return (LBound, HBound);
 	}
 	private static NX SingleMul(NX Num, in short Fac){
-		Num.Nums = Num[0 .. (Num.Len() +1)];
 		for(int i = 0; i < Num.Len(); i++){Num[i] *= Fac;}
 		Num.CBCleanUp();
 		return Num;
