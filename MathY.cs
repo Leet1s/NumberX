@@ -30,10 +30,6 @@ public static class MathY{
 	public static NX TWO     = new NX(false, new short[]{2}, 0, 0);
 	public static NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
 	// *** Unary operations:
-	private static NX Based(NX Num, in byte Base){
-		Num.Base = Base;
-		return Num;
-	}
 	public static NX Abs(NX Num){
 		Num.Sign = false;
 		return Num;
@@ -46,7 +42,19 @@ public static class MathY{
 	// § Comparisons:
 	public enum COMP{SAME, LESS, MORE};
 	public static COMP Compare(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A.Base != B.Base){
+			Console.Error.WriteLine("\tError:\nA comparison of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Shortcut:
+		if(A.Sign != B.Sign){
+			if(A.Sign){return COMP.MORE;}
+			else{return COMP.LESS;}
+		}
+		// ¶ Init:
 		(int LB, int HB) = PowerBounds(A, B);
+		// ¶ Comparison:
 		for(int i = HB; i >= LB; i--){
 			int DigitA = A.NumAtPow(i);
 			int DigitB = B.NumAtPow(i);
@@ -138,6 +146,7 @@ public static class MathY{
 			+ H.ShiftPow(A.Len())
 			).ShiftPow(A.Powr + B.Powr);
 	}
+	
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
 		for(int i = 0; i < Numbers.Length; i++){

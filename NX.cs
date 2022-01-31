@@ -27,7 +27,7 @@ using System.Text.RegularExpressions;
 
 public class NX{
 	// *** Global:
-	internal volatile static ushort     PRECISION  = 32;
+	internal volatile static ushort PRECISION = 32;
 	// § Regex:
 	private const string B62     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	private const string Pattern = @"^(?<ord>[<>])(?<sign>[+-])?(?<nums>(?<nBC>[0-9a-zA-Z]*)[,\.]?(?<nAC>[0-9a-zA-Z]*))(?<base>\*[2-9a-zA-Z])(?<powr>\^[+-]?[0-9a-zA-Z]+)?$";
@@ -109,7 +109,7 @@ public class NX{
 	// § Getters:
 	public int Len() => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
-	// * Indexer
+	// * Indexers
 	public short this[int Index]{
 		get{
 			if(Index < 0 || Index >= this.Len()){return 0;}
@@ -221,7 +221,7 @@ public class NX{
 		if(ID == -1){Pow = 0;}
 		else{
 			if(BEndian){Pow = ID - (Num.Length -1);}
-			else{Pow = - ID;}
+			else{Pow = -ID;}
 		}
 		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B62.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
 		// Return:
@@ -264,6 +264,10 @@ public class NX{
 		Temp.Powr += Shift;
 		return Temp;
 	}
+	internal static NX Based(NX Num, in byte Base){
+		Num.Base = Base;
+		return Num;
+	}
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
 		return false;
@@ -271,8 +275,8 @@ public class NX{
 	// *** Cleaners:
 	public void CBCleanUp(){
 		while(this.IsOverLoaded()){
-			if(this[^0] >= this.Base){this.Nums = this[0 .. (this.Len() +1)];}
-			else if(this[^0] < 0){
+			if(this[^1] >= this.Base){this.Nums = this[0 .. (this.Len() +1)];}
+			else if(this[^1] < 0){
 				for(int i = 0; i < this.Len(); i++){this[i] *= -1;}
 				this.CBCleanUp();
 				return;
@@ -288,11 +292,15 @@ public class NX{
 			}
 		}
 	}
+	/// <summary>
+	/// Removes unnecessary zeros (leading and trailing zeros) of Nums to make it more compact; also adjusting the power accordingly.
+	/// </summary>
 	public void Simplify(){
 		int L = 0;
 		int R = this.Len() -1;
 		while(this.Nums[L] == 0 && L <= R){L++;}
 		while(this.Nums[R] == 0 && R > L){R--;}
-		this.Nums = this.Nums[L .. (R +1)];
+		this.Nums  = this.Nums[L .. (R +1)];
+		this.Powr += L;
 	}
 }
