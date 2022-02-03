@@ -24,6 +24,7 @@
 namespace NumberX;
 
 using System.Text.RegularExpressions;
+using System.Linq;
 
 public class NX{
 	// *** Global:
@@ -107,12 +108,12 @@ public class NX{
 	}
 	// *** Getters & Setters:
 	// § Getters:
-	public int Len() => this.Nums.Length;
+	public int Size => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
 	// * Indexers
 	public short this[int Index]{
 		get{
-			if(Index < 0 || Index >= this.Len()){return 0;}
+			if(Index < 0 || Index >= this.Size){return 0;}
 			return this.Nums[Index];
 		}
 		set => this.Nums[Index] = value;
@@ -140,10 +141,11 @@ public class NX{
 	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
 	public static NX operator -(NX A, NX B) => MathY.Sum(A, -B);
 	public static NX operator *(NX A, NX B){
-		int Length = A.Len() + B.Len();
+		int Length = A.Size + B.Size;
 		if(Length > 300){return MathY.MulAK(A, B);}
 		return MathY.MulSB(A, B);
 	}
+	public static NX operator /(NX A, NX B) => MathY.DivSB(A, B);
 	// § Comparators:
 	public static bool operator ==(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
 	public static bool operator !=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
@@ -151,17 +153,12 @@ public class NX{
 	public static bool operator  <(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
 	public static bool operator >=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
 	public static bool operator <=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
-	public override bool Equals(object? Obj){
-		if(ReferenceEquals(this, Obj)){return true;}
-		if(ReferenceEquals(Obj, null)){return false;}
-		throw new NotImplementedException();
-	}
-	//TODO *** Conversion casting:
+	public override bool Equals(object? Obj) => ReferenceEquals(this, Obj);
+	// TODO *** Conversion casting:
 	// *** Miscellaneous methods:
+	internal int LastPow => this.Powr + this.Size -1;
 	// § Visualization:
-	public override string ToString(){
-		return this.ToStrB62();
-	}
+	public override string ToString() => this.ToStrB62();
 	public string ToStrB62(in bool BEndian = true){
 		if(this.Base > 62){
 			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B62's range!");
@@ -173,10 +170,10 @@ public class NX{
 		Str += this.Sign ? '-' : '+';
 		// ¶ Digits sequence:
 		if(BEndian)
-			for(int i = this.Len(); --i >= 0;)
+			for(int i = this.Size; --i >= 0;)
 				Str  += B62[this[i]];
 		else
-			for(int i = 0; i < this.Len(); i++)
+			for(int i = 0; i < this.Size; i++)
 				Str  += B62[this[i]];
 		// ¶ Base indicator:
 		Str += '*' + B62[this.Base];
@@ -227,16 +224,6 @@ public class NX{
 		// Return:
 		return Pow;
 	}
-	private static int LongLog2(long Num){
-		const long Bit = long.MinValue;
-		int        Pow = 63;
-		while(Pow >= 0){
-			if((Num & Bit) == Bit){break;}
-			Num <<= 1;
-			Pow--;
-		}
-		return Pow;
-	}
 	private static short[] ToNums(long Value, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
@@ -256,18 +243,13 @@ public class NX{
 		// Return:
 		return Nums;
 	}
-	internal short NumAtPow(in int Pow){
-		return this[Pow - this.Powr];
-	}
+	internal short NumAtPow(in int Pow) => this[Pow - this.Powr];
 	internal NX ShiftPow(in int Shift){
 		NX Temp    = new NX(this);
 		Temp.Powr += Shift;
 		return Temp;
 	}
-	internal static NX Based(NX Num, in byte Base){
-		Num.Base = Base;
-		return Num;
-	}
+	internal NX Based(in byte NewBase) => new NX(this){Base = NewBase};
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
 		return false;
@@ -275,13 +257,13 @@ public class NX{
 	// *** Cleaners:
 	public void CBCleanUp(){
 		while(this.IsOverLoaded()){
-			if(this[^1] >= this.Base){this.Nums = this[0 .. (this.Len() +1)];}
+			if(this[^1] >= this.Base){this.Nums = this[0 .. (this.Size +1)];}
 			else if(this[^1] < 0){
-				for(int i = 0; i < this.Len(); i++){this[i] *= -1;}
+				for(int i = 0; i < this.Size; i++){this[i] *= -1;}
 				this.CBCleanUp();
 				return;
 			}
-			for(int i = 0; i < this.Len(); i++){
+			for(int i = 0; i < this.Size; i++){
 				if(this[i] >= this.Base){
 					this[i +1] += (short)(this[i] / this.Base);
 					this[i]     = (short)(this[i] % this.Base);
@@ -292,12 +274,9 @@ public class NX{
 			}
 		}
 	}
-	/// <summary>
-	/// Removes unnecessary zeros (leading and trailing zeros) of Nums to make it more compact; also adjusting the power accordingly.
-	/// </summary>
 	public void Simplify(){
 		int L = 0;
-		int R = this.Len() -1;
+		int R = this.Size -1;
 		while(this.Nums[L] == 0 && L <= R){L++;}
 		while(this.Nums[R] == 0 && R > L){R--;}
 		this.Nums  = this.Nums[L .. (R +1)];

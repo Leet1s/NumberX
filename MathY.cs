@@ -23,12 +23,14 @@
 
 namespace NumberX;
 
+using System.Threading.Tasks;
+
 public static class MathY{
 	// *** Basic numbers:
-	public static NX ZERO    = new NX(false, new short[]{0}, 0, 0);
-	public static NX ONE     = new NX(false, new short[]{1}, 0, 0);
-	public static NX TWO     = new NX(false, new short[]{2}, 0, 0);
-	public static NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
+	public static readonly NX ZERO    = new NX(false, new short[]{0}, 0, 0);
+	public static readonly NX ONE     = new NX(false, new short[]{1}, 0, 0);
+	public static readonly NX TWO     = new NX(false, new short[]{2}, 0, 0);
+	public static readonly NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
 	// *** Unary operations:
 	public static NX Abs(NX Num){
 		Num.Sign = false;
@@ -43,10 +45,7 @@ public static class MathY{
 	public enum COMP{SAME, LESS, MORE};
 	public static COMP Compare(in NX A, in NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
-			Console.Error.WriteLine("\tError:\nA comparison of numbers with different bases was attempted!");
-			return null!;
-		}
+		if(A.Base != B.Base){Console.Error.WriteLine("\tWarning:\nA comparison of numbers with different bases was attempted!");}
 		// ¶ Shortcut:
 		if(A.Sign != B.Sign){
 			if(A.Sign){return COMP.MORE;}
@@ -83,17 +82,17 @@ public static class MathY{
 		int ASign = A.Sign ? -1 : 1;
 		int BSign = B.Sign ? -1 : 1;
 		// ¶ Summation:
-		Parallel.For(0, C.Len(), i => {
+		Parallel.For(0, C.Size, i => {
 			C[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.NumAtPow(LB + i));
 		});
 		// ¶ Checks:
-		for(int i = C.Len() -1; i-- >= 0;){
+		for(int i = C.Size -1; i-- >= 0;){
 			if(C[i] < 0){
 				C.Sign = true;
 				break;
 			} else if(C[i] > 0){break;}
 		}
-		if(C.Sign){for(int i = 0; i < C.Len(); i++){C[i] *= -1;}}
+		if(C.Sign){for(int i = 0; i < C.Size; i++){C[i] *= -1;}}
 		C.CBCleanUp();
 		C.Simplify();
 		// Return
@@ -108,12 +107,12 @@ public static class MathY{
 		// ¶ Init:
 		NX C = new NX(
 			A.Sign ^ B.Sign,
-			new short[A.Len() + B.Len()],
+			new short[A.Size + B.Size],
 			A.Base,
 			A.Powr + B.Powr
 		);
 		// ¶ Multiplication:
-		for(int i = 0; i < B.Len(); i++){C += SingleMul(A, B[i]).ShiftPow(i + B.Powr);}
+		for(int i = 0; i < B.Size; i++){C += SingleMul(A, B[i]).ShiftPow(i + B.Powr);}
 		// Return:
 		return C;
 	}
@@ -126,7 +125,7 @@ public static class MathY{
 		// ¶ Init:
 		MatchLength(ref A, ref B);
 		// Base Case:
-		if(A.Len() == 1){return SingleMul(A, B[0]);}
+		if(A.Size == 1){return SingleMul(A, B[0]);}
 		// ¶ Init:
 		(NX A_L, NX A_H) = SplitHalf(A);
 		(NX B_L, NX B_H) = SplitHalf(B);
@@ -142,11 +141,40 @@ public static class MathY{
 		// Return:
 		return 
 			(L 
-			+ (M - L - H).ShiftPow(A.Len() / 2) 
-			+ H.ShiftPow(A.Len())
+			+ (M - L - H).ShiftPow(A.Size / 2) 
+			+ H.ShiftPow(A.Size)
 			).ShiftPow(A.Powr + B.Powr);
 	}
-	
+	public static NX DivSB(NX A, in NX B){
+		// ¶ Safeguard:
+		if(A.Base != B.Base){
+			Console.Error.WriteLine("\tError:\nA division of numbers with different bases was attempted!");
+			return null!;
+		}
+		if(A.Size < B.Size){return DivSB(B, A);}
+		// ¶ Init:
+		NX C = new NX(
+			A.Sign ^ B.Sign,
+			new short[NX.PRECISION],
+			A.Base,
+			A.LastPow - B.LastPow - NX.PRECISION +1
+		);
+		NX[] TableB = new NX[B.Base];
+		Parallel.For(0, TableB.Length, i => {
+			TableB[i] = SingleMul(B, i);
+		});
+		// ¶ Division:
+		int j = 0;
+		int Shift = A.LastPow - B.LastPow;
+		for(int i = C.Size -1; i >= 0; i--){
+			C[i] = BinSrc(TableB, A.ShiftPow(Shift - j));
+			A   -= TableB[C[i]].ShiftPow(Shift - j);
+			j++;
+		}
+		// Return:
+		C.Simplify();
+		return C;
+	}
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
 		for(int i = 0; i < Numbers.Length; i++){
@@ -163,26 +191,40 @@ public static class MathY{
 		return Total;
 	}
 	// *** Helpers:
-	private static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Len() -1);
+	private static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Size -1);
 	private static (int LB, int HB) PowerBounds(in NX A, in NX B){
 		int LBound = Math.Min(A.Powr, B.Powr);
-		int HBound = Math.Max(A.Powr + A.Len() -1, B.Powr + B.Len() -1);
+		int HBound = Math.Max(A.Powr + A.Size -1, B.Powr + B.Size -1);
 		return (LBound, HBound);
 	}
-	private static NX SingleMul(NX Num, in short Fac){
-		for(int i = 0; i < Num.Len(); i++){Num[i] *= Fac;}
+	private static NX SingleMul(NX Num, in int Fac){
+		for(int i = 0; i < Num.Size; i++){Num[i] *= (short) Fac;}
 		Num.CBCleanUp();
 		return Num;
 	}
+	private static int BinSrc(in NX[] Table, in NX Target){
+		int L = 0;
+		int R = Table.Length -1;
+		while(L <= R){
+			if(R < 0){return 0;}
+			int M = (L + R) / 2;
+			switch(Compare(Target, Table[M])){
+				case COMP.SAME: return M;
+				case COMP.LESS: R = M -1;
+				case COMP.MORE: L = M +1;
+			}
+		}
+		return R;
+	}
 	private static void MatchLength(ref NX A, ref NX B){
-		if(A.Len() >= B.Len()){B.Nums = B[0 .. A.Len()];}
-		else{A.Nums = A[0 .. B.Len()];}
+		if(A.Size >= B.Size){B.Nums = B[0 .. A.Size];}
+		else{A.Nums = A[0 .. B.Size];}
 	}
 	private static (NX, NX) SplitHalf(NX Num){
-		int Mid = Num.Len() / 2;
+		int Mid = Num.Size / 2;
 		NX  LH  = new NX(
 			Num.Sign,
-			Num[0 .. (Mid +1)],
+			Num[0 .. Mid],
 			Num.Base,
 			0
 		);
@@ -193,5 +235,12 @@ public static class MathY{
 			0
 		);
 		return (LH, HH);
+	}
+	// *** Miscellaneous:
+	public static bool IsEven(in NX Num){
+		bool Even = Num.NumAtPower(0) % 2 == 0;
+		if(Num.Base % 2 == 0 || Num.Powr + Num.Size <= 1){return Even;}
+		for(int i = 1; i < Num.Powr + Num.Size; i++){Even ^= Num.NumAtPow(i) % 2 != 0;}
+		return Even;
 	}
 }
