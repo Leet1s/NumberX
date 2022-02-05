@@ -31,6 +31,8 @@ public static class MathY{
 	public static readonly NX ONE     = new NX(false, new short[]{1}, 0, 0);
 	public static readonly NX TWO     = new NX(false, new short[]{2}, 0, 0);
 	public static readonly NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
+	public static readonly NX POS_INF = new NX(false, new short[]{short.MaxValue}, 0, 0);
+	public static readonly NX NEG_INF = new NX(true , new short[]{short.MaxValue}, 0, 0);
 	// *** Unary operations:
 	public static NX Abs(NX Num){
 		Num.Sign = false;
@@ -40,6 +42,8 @@ public static class MathY{
 		Num.Sign = !Num.Sign;
 		return Num;
 	}
+	public static NX Increment(NX Num) => Num + ONE.Based(Num.Base);
+	public static NX Decrement(NX Num) => Num - ONE.Based(Num.Base);
 	// *** Binary operations:
 	// § Comparisons:
 	public enum COMP{SAME, LESS, MORE};
@@ -160,14 +164,12 @@ public static class MathY{
 			A.LastPow - B.LastPow - NX.PRECISION +1
 		);
 		NX[] TableB = new NX[B.Base];
-		Parallel.For(0, TableB.Length, i => {
-			TableB[i] = SingleMul(B, i);
-		});
+		for(int i = 0; i < TableB.Length; i++){TableB[i] = SingleMul(B, i);}
 		// ¶ Division:
 		int j = 0;
 		int Shift = A.LastPow - B.LastPow;
 		for(int i = C.Size -1; i >= 0; i--){
-			C[i] = BinSrc(TableB, A.ShiftPow(Shift - j));
+			C[i] = (short) BinSrc(TableB, A.ShiftPow(Shift - j));
 			A   -= TableB[C[i]].ShiftPow(Shift - j);
 			j++;
 		}
@@ -190,9 +192,10 @@ public static class MathY{
 		// Return:
 		return Total;
 	}
+	// TODO Constants:
 	// *** Helpers:
-	private static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Size -1);
-	private static (int LB, int HB) PowerBounds(in NX A, in NX B){
+	internal static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Size -1);
+	private  static (int LB, int HB) PowerBounds(in NX A, in NX B){
 		int LBound = Math.Min(A.Powr, B.Powr);
 		int HBound = Math.Max(A.Powr + A.Size -1, B.Powr + B.Size -1);
 		return (LBound, HBound);
@@ -210,8 +213,8 @@ public static class MathY{
 			int M = (L + R) / 2;
 			switch(Compare(Target, Table[M])){
 				case COMP.SAME: return M;
-				case COMP.LESS: R = M -1;
-				case COMP.MORE: L = M +1;
+				case COMP.LESS: R = M -1; break;
+				case COMP.MORE: L = M +1; break;
 			}
 		}
 		return R;
@@ -237,8 +240,9 @@ public static class MathY{
 		return (LH, HH);
 	}
 	// *** Miscellaneous:
+	public static bool IsInteger(in NX Num) => Num.Powr >= 0;
 	public static bool IsEven(in NX Num){
-		bool Even = Num.NumAtPower(0) % 2 == 0;
+		bool Even = Num.NumAtPow(0) % 2 == 0;
 		if(Num.Base % 2 == 0 || Num.Powr + Num.Size <= 1){return Even;}
 		for(int i = 1; i < Num.Powr + Num.Size; i++){Even ^= Num.NumAtPow(i) % 2 != 0;}
 		return Even;

@@ -1,4 +1,5 @@
-﻿//		NumberX, a C# library for storing and manipulating numbers with 
+﻿using System.Security.Cryptography.X509Certificates;
+//		NumberX, a C# library for storing and manipulating numbers with 
 //	arbitrary base and precision.
 //	Copyright (C) 2022  Karuljonnai Gustav Màrthos Vünnsha
 //
@@ -30,11 +31,10 @@ public class NX{
 	// *** Global:
 	internal volatile static ushort PRECISION = 32;
 	// § Regex:
-	private const string B62     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	private const string Pattern = @"^(?<ord>[<>])(?<sign>[+-])?(?<nums>(?<nBC>[0-9a-zA-Z]*)[,\.]?(?<nAC>[0-9a-zA-Z]*))(?<base>\*[2-9a-zA-Z])(?<powr>\^[+-]?[0-9a-zA-Z]+)?$";
+	private const string B64     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#";
+	private const string Pattern = @"^([<>])([+-])?(([0-9a-zA-Z@#]*)[,\.]?([0-9a-zA-Z@#]*))(\*[2-9a-zA-Z])(\^[+-]?[0-9a-zA-Z@#]+)?$";
 	private static Regex RE      = new Regex(Pattern);
 	// *** Self attributes:
-	// § Number properties:
 	internal bool    Sign = false;
 	internal short[] Nums = {0};
 	internal byte    Base = 2;
@@ -67,7 +67,7 @@ public class NX{
 		// ¶ Creates the raw values for the new NX:
 		bool    Sign = StrSign(Elements[2].ToString());
 		short[] Nums = StrNums(Elements[4].ToString() + Elements[5].ToString(), isBE);
-		byte    Base = (byte) B62.IndexOf(Elements[6].ToString()[1]);
+		byte    Base = (byte) B64.IndexOf(Elements[6].ToString()[1]);
 		int     Powr = StrPowr(Elements[7].ToString(),  Elements[3].ToString(), Base, isBE);
 		// Return:
 		return new NX(Sign, Nums, Base, Powr);
@@ -110,6 +110,7 @@ public class NX{
 	// § Getters:
 	public int Size => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
+	public int LastPow => this.Powr + this.Size -1;
 	// * Indexers
 	public short this[int Index]{
 		get{
@@ -136,6 +137,8 @@ public class NX{
 		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
 	// *** Operator methods:
+	public static NX operator ++(NX Num) => Num = MathY.Increment(Num);
+	public static NX operator --(NX Num) => Num = MathY.Decrement(Num);
 	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
 	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
@@ -154,14 +157,14 @@ public class NX{
 	public static bool operator >=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
 	public static bool operator <=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
 	public override bool Equals(object? Obj) => ReferenceEquals(this, Obj);
-	// TODO *** Conversion casting:
-	// *** Miscellaneous methods:
-	internal int LastPow => this.Powr + this.Size -1;
-	// § Visualization:
-	public override string ToString() => this.ToStrB62();
-	public string ToStrB62(in bool BEndian = true){
-		if(this.Base > 62){
-			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B62's range!");
+	public override int GetHashCode() => base.GetHashCode();
+	// *** Conversion:
+	public override string ToString() => this.ToStrB64();
+	public static explicit operator double(NX Num) => Num.ToDouble();
+	public static explicit operator long(NX Num) => Num.ToLong();
+	public string ToStrB64(in bool BEndian = true){
+		if(this.Base > 64){
+			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B64's range!");
 			return "";
 		}
 		// ¶ Endianness indicator:
@@ -171,24 +174,45 @@ public class NX{
 		// ¶ Digits sequence:
 		if(BEndian)
 			for(int i = this.Size; --i >= 0;)
-				Str  += B62[this[i]];
+				Str  += B64[this[i]];
 		else
 			for(int i = 0; i < this.Size; i++)
-				Str  += B62[this[i]];
+				Str  += B64[this[i]];
 		// ¶ Base indicator:
-		Str += '*' + B62[this.Base];
+		Str += '*' + B64[this.Base];
 		// ¶ Power indicator:
 		Str += '^' + this.Powr < 0 ? '-' : '+';
 		short[] Pow = ToNums(this.Powr, this.Base);
 		if(BEndian)
 			for(int i = Pow.Length; --i >= 0;)
-				Str += B62[Pow[i]];
+				Str += B64[Pow[i]];
 		else
 			for(int i = 0; i < Pow.Length; i++)
-				Str += B62[Pow[i]];
+				Str += B64[Pow[i]];
 		// Return:
 		return Str;
 	}
+	public double ToDouble(){
+		// ¶ Init:
+		double Value = 0;
+		double Sign  = this.Sign ? -1 : 1;
+		// ¶ Sum of Nums:
+		for(int i = 0; i < this.Size; i++){Value += Sign * this[i] * Math.Pow(this.Base, i + this.Powr);}
+		// Return:
+		return Value;
+	}
+	public long ToLong(){
+		// ¶ Init:
+		long Value = 0;
+		long Sign  = this.Sign ? -1 : 1;
+		(_, int HB) = MathY.PowerBounds(this);
+		if(HB < 0){return Value;}
+		// ¶ Sum of Nums:
+		for(int i = 0; i <= HB; i++){Value += Sign * this.NumAtPow(i) * (long)Math.Pow(this.Base, i);}
+		// Return:
+		return Value;
+	}
+	// *** Miscellaneous methods:
 	// § Helper Functions:
 	private static bool StrSign(in string Sign) => "-".Equals(Sign);
 	private static short[] StrNums(string Digits, in bool BEndian){
@@ -198,7 +222,7 @@ public class NX{
 		short[] Nums = new short[Digits.Length];
 		if(BEndian){Digits = (string) Digits.Reverse();}
 		// ¶ Decoding:
-		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short) B62.IndexOf(Digits[i]);}
+		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short) B64.IndexOf(Digits[i]);}
 		// Return:
 		return Nums;
 	}
@@ -220,7 +244,7 @@ public class NX{
 			if(BEndian){Pow = ID - (Num.Length -1);}
 			else{Pow = -ID;}
 		}
-		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B62.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
+		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
 		// Return:
 		return Pow;
 	}

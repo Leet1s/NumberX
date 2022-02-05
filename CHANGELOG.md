@@ -4,6 +4,10 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 0.2.2
+* *: Fixed errors in several MathY methods
+* +: Increment and decrement
+* +: Integer verification
 ## 0.2.1
 * *: String method now supports bases from 2 to 64
 * +: Positive and negative infinity to MathY as basic numbers
