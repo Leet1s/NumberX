@@ -4,6 +4,16 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 0.3.0
+* *: Error in comparison method
+* +: Shift operators (Little Endianness based)
+* +: Newton-Raphson division and reciprocal
+* +: Goldschmidt division algorithm
+* +: Floor and ceil
+* +: Exponentiation by squaring
+* +: Computable E and PI
+* +: Cosine (Taylor series)
+* +: Tangent (Karuljonnai Màrthos' Approximation)
 ## 0.2.2
 * *: Fixed errors in several MathY methods
 * +: Increment and decrement

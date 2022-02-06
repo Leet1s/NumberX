@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-//		NumberX, a C# library for storing and manipulating numbers with 
+﻿//		NumberX, a C# library for storing and manipulating numbers with 
 //	arbitrary base and precision.
 //	Copyright (C) 2022  Karuljonnai Gustav Màrthos Vünnsha
 //
@@ -22,10 +21,10 @@
 //		This program was developed using GitHub; you can find the original
 //	repository at <https://github.com/Karuljonnai/NumberX>.
 
-namespace NumberX;
-
 using System.Text.RegularExpressions;
 using System.Linq;
+
+namespace NumberX;
 
 public class NX{
 	// *** Global:
@@ -77,6 +76,7 @@ public class NX{
 		// ¶ Safeguard:
 		if(Base < 2){
 			Console.Error.WriteLine("\tError:\nAttempted to create a NX with an invalid base!");
+			return null!;
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
@@ -119,6 +119,13 @@ public class NX{
 		}
 		set => this.Nums[Index] = value;
 	}
+	public short this[Index Index]{
+		get => this[Index.Value];
+		set => this[Index.Value] = value;
+	}
+	public short[] this[int Start, int End]{
+		get => this.Nums[Start .. End];
+	}
 	public short[] this[System.Range Range]{
 		get{
 			short[] Result = new short[Range.End.Value - Range.Start.Value];
@@ -127,18 +134,18 @@ public class NX{
 			return Result;
 		}
 	}
-	public short this[Index Index]{
-		get => this[Index.Value];
-		set => this[Index.Value] = value;
-	}
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
 		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
 	// *** Operator methods:
+	public static NX operator >>(NX Num, int Shift) => Num.ShiftPow(Shift);
+	public static NX operator <<(NX Num, int Shift) => Num.ShiftPow(-Shift);
 	public static NX operator ++(NX Num) => Num = MathY.Increment(Num);
 	public static NX operator --(NX Num) => Num = MathY.Decrement(Num);
+	public static NX operator ~(NX Num) => MathY.RecSB(Num);
+	public static NX operator !(NX Num) => MathY.FacSB(Num);
 	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
 	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
@@ -149,6 +156,7 @@ public class NX{
 		return MathY.MulSB(A, B);
 	}
 	public static NX operator /(NX A, NX B) => MathY.DivSB(A, B);
+	public static NX operator ^(NX A, NX B) => MathY.ExpSQ(A, B);
 	// § Comparators:
 	public static bool operator ==(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
 	public static bool operator !=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
@@ -213,6 +221,14 @@ public class NX{
 		return Value;
 	}
 	// *** Miscellaneous methods:
+	internal NX Based(in byte NewBase) => new NX(this){Base = NewBase};
+	internal NX Signed(in bool NewSign) => new NX(this){Sign = NewSign};
+	internal NX ShiftPow(in int Shift){
+		NX Temp    = new NX(this);
+		Temp.Powr += Shift;
+		return Temp;
+	}
+	internal short NumAtPow(in int Pow) => this[Pow - this.Powr];
 	// § Helper Functions:
 	private static bool StrSign(in string Sign) => "-".Equals(Sign);
 	private static short[] StrNums(string Digits, in bool BEndian){
@@ -267,13 +283,6 @@ public class NX{
 		// Return:
 		return Nums;
 	}
-	internal short NumAtPow(in int Pow) => this[Pow - this.Powr];
-	internal NX ShiftPow(in int Shift){
-		NX Temp    = new NX(this);
-		Temp.Powr += Shift;
-		return Temp;
-	}
-	internal NX Based(in byte NewBase) => new NX(this){Base = NewBase};
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
 		return false;
