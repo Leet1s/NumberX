@@ -4,6 +4,12 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 0.3.1
+* *: Wrong power shift on division
+* +: Sine and Tangent (Taylor series)
+* +: Modulus
+* +: Automatic base 0 reasignment; used for MathY constants
+* +: Base checking operators
 ## 0.3.0
 * *: Error in comparison method
 * +: Shift operators (Little Endianness based)

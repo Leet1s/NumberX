@@ -111,7 +111,12 @@ public class NX{
 	public int Size => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
 	public int LastPow => this.Powr + this.Size -1;
-	// * Indexers
+	// § Setters:
+	public static void SetPrecision(ushort Precision){
+		PRECISION = Precision;
+		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
+	}
+	// *** Indexers
 	public short this[int Index]{
 		get{
 			if(Index < 0 || Index >= this.Size){return 0;}
@@ -134,11 +139,6 @@ public class NX{
 			return Result;
 		}
 	}
-	// § Setters:
-	public static void SetPrecision(ushort Precision){
-		PRECISION = Precision;
-		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
-	}
 	// *** Operator methods:
 	public static NX operator >>(NX Num, int Shift) => Num.ShiftPow(Shift);
 	public static NX operator <<(NX Num, int Shift) => Num.ShiftPow(-Shift);
@@ -148,14 +148,15 @@ public class NX{
 	public static NX operator !(NX Num) => MathY.FacSB(Num);
 	public static NX operator +(NX Num) => Num;
 	public static NX operator -(NX Num) => MathY.Negate(Num);
-	public static NX operator +(NX A, NX B) => MathY.Sum(A, B);
-	public static NX operator -(NX A, NX B) => MathY.Sum(A, -B);
+	public static NX operator +(NX A, NX B) => MathY.SumSB(A, B);
+	public static NX operator -(NX A, NX B) => MathY.SumSB(A, -B);
 	public static NX operator *(NX A, NX B){
 		int Length = A.Size + B.Size;
 		if(Length > 300){return MathY.MulAK(A, B);}
 		return MathY.MulSB(A, B);
 	}
 	public static NX operator /(NX A, NX B) => MathY.DivSB(A, B);
+	public static NX operator %(NX A, NX B) => MathY.ModSB(A, B);
 	public static NX operator ^(NX A, NX B) => MathY.ExpSQ(A, B);
 	// § Comparators:
 	public static bool operator ==(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
@@ -164,6 +165,8 @@ public class NX{
 	public static bool operator  <(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
 	public static bool operator >=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
 	public static bool operator <=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
+	public static bool operator  &(NX A, NX B) => A.Base != B.Base;
+	public static bool operator  |(NX A, NX B) => A.Base == 0 | B.Base == 0;
 	public override bool Equals(object? Obj) => ReferenceEquals(this, Obj);
 	public override int GetHashCode() => base.GetHashCode();
 	// *** Conversion:
@@ -222,6 +225,7 @@ public class NX{
 	}
 	// *** Miscellaneous methods:
 	internal NX Based(in byte NewBase) => new NX(this){Base = NewBase};
+	internal NX Based(in NX Num) => new NX(this){Base = Num.Base};
 	internal NX Signed(in bool NewSign) => new NX(this){Sign = NewSign};
 	internal NX ShiftPow(in int Shift){
 		NX Temp    = new NX(this);

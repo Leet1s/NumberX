@@ -37,7 +37,7 @@ public static class MathY{
 	public static NX Floor(in NX Num){
 		if(Num.Powr >= 0){return Num;}
 		try{return new NX(Num.Sign, Num[-Num.Powr, Num.Size], Num.Base, 0);}
-		catch{return ZERO.Based(Num.Base);}
+		catch{return ZERO.Based(Num);}
 	}
 	public static NX Ceil(in NX Num){
 		NX Res = Floor(Num);
@@ -52,12 +52,12 @@ public static class MathY{
 		Num.Sign = !Num.Sign;
 		return Num;
 	}
-	public static NX Increment(NX Num) => Num + ONE.Based(Num.Base);
-	public static NX Decrement(NX Num) => Num - ONE.Based(Num.Base);
-	public static NX RecSB(NX Num) => ONE.Based(Num.Base) / Num;
-	public static NX RecNR(NX Num){
+	public static NX Increment(NX Num) => Num + ONE;
+	public static NX Decrement(NX Num) => Num - ONE;
+	public static NX RecSB(NX Num) => ONE / Num;
+	public static NX RecNR(in NX Num){
 		// ¶ Safeguard:
-		if(Abs(Num) == ZERO.Based(Num.Base)){
+		if(Abs(Num) == ZERO){
 			Console.Error.WriteLine("\tWarning:\nA division by zero was made!");
 			if(Num.Sign){return NEG_INF;}
 			return POS_INF;
@@ -68,15 +68,15 @@ public static class MathY{
 		NX _Rec = new NX{Base = Num.Base};
 		// ¶ Newton-Raphson Iterations:
 		int i = 0;
-		while(MatchingDigits(Rec, _Rec) <= NX.PRECISION && i <= NX.PRECISION){
+		while(i <= NX.PRECISION && MatchingDigits(Rec, _Rec) <= NX.PRECISION){
 			_Rec = Rec;
 			RefineNR(Num, ref Rec);
 			i++;
 		}
 		// Return
 		return Rec;
-		// ¶ Newton-Raphson Iteration:
-		void RefineNR(in NX Target, ref NX Guess) => Guess += Guess * (ONE.Based(Guess.Base) - Guess * Target);
+		// ¶ Local Newton-Raphson Iteration:
+		void RefineNR(in NX Target, ref NX Guess) => Guess += Guess * (ONE - Guess * Target);
 	}
 	public static NX FacSB(NX Num){
 		// ¶ Safeguard:
@@ -95,37 +95,91 @@ public static class MathY{
 		// Return:
 		return Fac;
 	}
+	public static NX EToTS(NX Num){
+		// ¶ Init:
+		NX R = ZERO.Based(Num.Base);
+		NX N = ZERO.Based(Num.Base);
+		NX I = ONE.Based(Num.Base);
+		// ¶ Taylor series:
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+			I  = (Num ^ N) / !N;
+			R += I;
+			N++;
+			i++;
+		}
+		// Return
+		return R;
+	}
 	// § Trigometric:
-	public static NX CosTS(NX Num){
+	public static NX CosTS(in NX Num){
 		// Init:
 		NX C = ZERO.Based(Num.Base);
 		NX N = ZERO.Based(Num.Base);
 		NX I = ONE.Based(Num.Base);
 		// ¶ Taylor series:
-		while(I > ONE.Based(I.Base) << NX.PRECISION){
-			I  = (-ONE.Based(Num.Base) ^ N) / !(TWO.Based(Num.Base) * N) * (Num ^ (TWO.Based(Num.Base) * N));
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+			I  = ((-ONE) ^ N) / !(TWO * N) * (Num ^ (TWO * N));
 			C += I;
 			N++;
+			i++;
 		}
 		// Return
 		return C;
 	}
-	// TODO SinTS
-	// TODO TanTS
-	public static NX TanKMApprox(NX Num){
+	public static NX SinTS(in NX Num){
 		// Init:
-		NX PI2  = PI(Num.Base) ^ TWO.Based(Num.Base);
-		NX NS4  = (Num ^ TWO.Based(Num.Base)) * new NX(true, new short[]{4}, Num.Base, 0);
+		NX S = ZERO.Based(Num.Base);
+		NX N = ZERO.Based(Num.Base);
+		NX I = ONE.Based(Num.Base);
+		// ¶ Taylor series:
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+			I  = ((-ONE) ^ N) / !(TWO * N + ONE) * (Num ^ (TWO * N + ONE));
+			S += I;
+			N++;
+			i++;
+		}
+		// Return
+		return S;
+	}
+	public static NX TanTS(NX Num){
+		// Init:
+		NX S = new NX();
+		NX C = new NX();
+		// ¶ Parallel computation:
+		Parallel.Invoke(
+			() => S = SinTS(Num),
+			() => C = CosTS(Num)
+		);
+		// Reuturn
+		return S / C;
+	}
+	public static NX TanKMApprox(in NX Num){
+		// Init:
+		NX PI2  = PI(Num.Base) ^ TWO;
+		NX NS4  = (Num ^ TWO) * new NX(true, new short[]{4}, Num.Base, 0);
 		NX Five = new NX(false, new short[]{5}, Num.Base, 0);
 		// Return
 		return (Num * (Five * PI2 + NS4)) / (Five * (PI2 + NS4));
 	}
+	//TODO § Hyperbolic:
 	// *** Binary operations:
 	// § Comparisons:
 	public enum COMP{SAME, LESS, MORE};
 	public static COMP Compare(in NX A, in NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){Console.Error.WriteLine("\tWarning:\nA comparison of numbers with different bases was attempted!");}
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tWarning:\nA comparison with dual zero base was attempted!");
+				goto CompareContinue;
+			}
+			if(A.Base == 0){return Compare(A.Based(B), B);}
+			else{return Compare(A, B.Based(A));}
+		}
+		if(A & B){Console.Error.WriteLine("\tWarning:\nA comparison of numbers with different bases was attempted!");}
+		CompareContinue:
 		// ¶ Shortcut:
 		if(A.Sign != B.Sign){
 			if(A.Sign){return COMP.LESS;}
@@ -145,9 +199,17 @@ public static class MathY{
 		return COMP.SAME;
 	}
 	// § Arithmetic:
-	public static NX Sum(NX A, NX B){
+	public static NX SumSB(NX A, NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return SumSB(A.Based(B), B);}
+			else{return SumSB(A, B.Based(A));}
+		}
+		if(A & B){
 			Console.Error.WriteLine("\tError:\nAn addition of numbers with different bases was attempted!");
 			return null!;
 		}
@@ -165,14 +227,6 @@ public static class MathY{
 		Parallel.For(0, C.Size, i => {
 			C[i] = (short)(ASign * A.NumAtPow(LB + i) + BSign * B.NumAtPow(LB + i));
 		});
-		// ¶ Checks:
-		for(int i = C.Size -1; i-- >= 0;){
-			if(C[i] < 0){
-				C.Sign = true;
-				break;
-			} else if(C[i] > 0){break;}
-		}
-		if(C.Sign){for(int i = 0; i < C.Size; i++){C[i] *= -1;}}
 		C.CBCleanUp();
 		C.Simplify();
 		// Return
@@ -180,7 +234,15 @@ public static class MathY{
 	}
 	public static NX MulSB(in NX A, in NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return MulSB(A.Based(B), B);}
+			else{return MulSB(A, B.Based(A));}
+		}
+		if(A & B){
 			Console.Error.WriteLine("\tError:\nA multiplication of numbers with different bases was attempted!");
 			return null!;
 		}
@@ -198,7 +260,15 @@ public static class MathY{
 	}
 	public static NX MulAK(NX A, NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return MulAK(A.Based(B), B);}
+			else{return MulAK(A, B.Based(A));}
+		}
+		if(A & B){
 			Console.Error.WriteLine("\tError:\nA multiplication of numbers with different bases was attempted!");
 			return null!;
 		}
@@ -227,11 +297,19 @@ public static class MathY{
 	}
 	public static NX DivSB(NX A, in NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return DivSB(A.Based(B), B);}
+			else{return DivSB(A, B.Based(A));}
+		}
+		if(A & B){
 			Console.Error.WriteLine("\tError:\nA division of numbers with different bases was attempted!");
 			return null!;
 		}
-		if(Abs(B) == ZERO.Based(B.Base)){
+		if(Abs(B) == ZERO){
 			Console.Error.WriteLine("\tWarning:\nA division by zero was made!");
 			if(A.Sign){return NEG_INF;}
 			return POS_INF;
@@ -248,21 +326,45 @@ public static class MathY{
 		NX[] TableB = new NX[B.Base];
 		for(int i = 0; i < TableB.Length; i++){TableB[i] = SingleMul(B, i);}
 		// ¶ Division:
-		int j = 0;
 		int Shift = A.LastPow - B.LastPow;
+		int j = 0;
 		for(int i = C.Size -1; i >= 0; i--){
-			C[i] = (short) BinSrc(TableB, A >>(Shift - j));
-			A   -= TableB[C[i]]>>(Shift - j);
+			C[i] = (short)BinSrc(TableB, A << Shift - j);
+			A   -= TableB[C[i]] >> Shift - j;
 			j++;
 		}
 		// Return:
 		C.Simplify();
 		return C;
 	}
-	public static NX DivNR(NX A, NX B) => (A.Signed(A.Sign ^ B.Sign) << (B.LastPow +1)) * RecNR(Abs(B) << (B.LastPow +1));
+	public static NX DivNR(NX A, NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return DivNR(A.Based(B), B);}
+			else{return DivNR(A, B.Based(A));}
+		}
+		if(A & B){
+			Console.Error.WriteLine("\tError:\nA division of numbers with different bases was attempted!");
+			return null!;
+		}
+		// Return
+		return (A.Signed(A.Sign ^ B.Sign) << (B.LastPow +1)) * RecNR(Abs(B) << (B.LastPow +1));
+		}
 	public static NX DivRG(NX A, NX B){
 		// Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return DivRG(A.Based(B), B);}
+			else{return DivRG(A, B.Based(A));}
+		}
+		if(A & B){
 			Console.Error.WriteLine("\tError:\nA division with numbers with different bases was attempted!");
 			return null!;
 		}
@@ -271,9 +373,10 @@ public static class MathY{
 		B.Sign  = false;
 		A     <<= B.LastPow +1;
 		B     <<= B.LastPow +1;
+		// ¶ Division:
 		int i = 0;
-		while(ONE.Based(A.Base) - B > ONE.Based(A.Base) << NX.PRECISION && i <= NX.PRECISION){
-			NX F = TWO.Based(B.Base) - B;
+		while(ONE - B > ONE << NX.PRECISION && i <= NX.PRECISION){
+			NX F = TWO - B;
 			Parallel.Invoke(
 				() => A *= F,
 				() => B *= F
@@ -283,10 +386,50 @@ public static class MathY{
 		// Return
 		return A;
 	}
-	// TODO Mod
+	public static NX ModSB(NX A, in NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return ModSB(A.Based(B), B);}
+			else{return ModSB(A, B.Based(A));}
+		}
+		if(A & B){
+			Console.Error.WriteLine("\tError:\nA mudulus of numbers with different bases was attempted!");
+			return null!;
+		}
+		if(Abs(B) == ZERO){
+			Console.Error.WriteLine("\tError:\nA modulo zero was attempetd!");
+			return null!;
+		}
+		// ¶ Init:
+		bool Sign = A.Sign;
+		A = Abs(A);
+		NX[] TableB = new NX[B.Base];
+		for(int i = 0; i < TableB.Length; i++){TableB[i] = SingleMul(Abs(B), i);}
+		// ¶ Modulus:
+		int Shift = A.LastPow - B.LastPow;
+		int j = 0;
+		while(A >= Abs(B)){
+			A -= TableB[BinSrc(TableB, A << Shift - j)] >> Shift - j;
+			j++;
+		}
+		// Return
+		return A.Signed(Sign);
+	}
 	public static NX ExpSQ(in NX A, NX B){
 		// ¶ Safeguard:
-		if(A.Base != B.Base){
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return ExpSQ(A.Based(B), B);}
+			else{return ExpSQ(A, B.Based(A));}
+		}
+		if(!(A & B)){
 			Console.Error.WriteLine("\tError:\nAttempted to exponentiate numbers with different bases!");
 			return null!;
 		}
@@ -295,21 +438,21 @@ public static class MathY{
 			B = Floor(B);
 		}
 		// ¶ Base cases:
-		if(A == -ONE.Based(A.Base)){
+		if(A == -ONE){
 			if(IsEven(B)){return ONE.Based(A.Base);}
 			else{return -ONE.Based(A.Base);}
 		}
-		if(B == ONE.Based(B.Base)){return A;}
-		if(A == ONE.Based(A.Base) || B == ZERO.Based(B.Base)){return ONE.Based(A.Base);}
+		if(B == ONE){return A;}
+		if(A == ONE || B == ZERO){return ONE.Based(A.Base);}
 		// ¶ Init:
 		NX C = new NX();
 		// ¶ Binary divide and conquer recursion:
 		if(IsEven(B)){
-			C  = ExpSQ(A, B / TWO.Based(B.Base));
+			C  = ExpSQ(A, B / TWO);
 			C *= C;
 		} else{
 			B--;
-			C  = ExpSQ(A, B / TWO.Based(B.Base));
+			C  = ExpSQ(A, B / TWO);
 			C *= C;
 			C *= A;
 		}
@@ -320,7 +463,7 @@ public static class MathY{
 	public static NX Summation(in NX[] Numbers){
 		// ¶ Safeguard:
 		for(int i = 0; i < Numbers.Length; i++){
-			if(Numbers[0].Base != Numbers[i].Base){
+			if(Numbers[0] & Numbers[i]){
 				Console.Error.WriteLine("\tError:\nThe summation of numbers with different bases was attempted!");
 				return null!;
 			}
@@ -344,7 +487,7 @@ public static class MathY{
 		NX N = ONE.Based(Base);
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
-		while(I > ONE.Based(Base) << NX.PRECISION){
+		while(I > ONE << NX.PRECISION){
 			I  = ~!N;
 			E += I;
 			N++;
@@ -363,13 +506,13 @@ public static class MathY{
 		NX N = ONE.Based(Base);
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
-		while(I > ONE.Based(Base) << NX.PRECISION){
-			I  = ((TWO.Based(Base) ^ N) * (!N ^ TWO.Based(Base)))/!(ONE.Based(Base) + TWO.Based(Base) * N);
+		while(I > ONE << NX.PRECISION){
+			I  = ((TWO ^ N) * (!N ^ TWO))/!(ONE + TWO * N);
 			P += I;
 			N++;
 		}
 		// Return
-		return TWO.Based(Base) * P;
+		return TWO * P;
 	}
 	// *** Helpers:
 	internal static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Size -1);
@@ -419,15 +562,14 @@ public static class MathY{
 	}
 	// *** Miscellaneous:
 	public static int MatchingDigits(in NX A, in NX B){
-		int Len = Math.Min(A.Size, B.Size);
-		int i   = 0;
-		while(A[i] == B[i] && i < Len){i++;}
+		int i = 0;
+		while(A.Nums?[i] == B.Nums?[i]){i++;}
 		return i;
 	}
 	public static bool IsInteger(in NX Num) => Num.Powr >= 0;
 	public static bool IsEven(in NX Num){
 		bool Even = Num.NumAtPow(0) % 2 == 0;
-		if(Num.Base % 2 == 0 || Num.Powr + Num.Size <= 1){return Even;}
+		if(Num.Base % 2 == 0 | Num.Powr + Num.Size <= 1){return Even;}
 		for(int i = 1; i < Num.Powr + Num.Size; i++){Even ^= Num.NumAtPow(i) % 2 != 0;}
 		return Even;
 	}
