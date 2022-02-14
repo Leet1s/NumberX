@@ -4,6 +4,13 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 0.3.2
+* *: Added 'in' to several NX function parameters to make them more memory efficient
+* *: ExpSQ -> PowSQ && EToTS -> ExpTS
+* *: Iteration limit to E & PI computations
+* +: Narutal logarithm using the Edmond Halley's method
+* +: Log N
+* +: Non integer exponentiation
 ## 0.3.1
 * *: Wrong power shift on division
 * +: Sine and Tangent (Taylor series)

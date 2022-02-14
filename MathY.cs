@@ -52,9 +52,9 @@ public static class MathY{
 		Num.Sign = !Num.Sign;
 		return Num;
 	}
-	public static NX Increment(NX Num) => Num + ONE;
-	public static NX Decrement(NX Num) => Num - ONE;
-	public static NX RecSB(NX Num) => ONE / Num;
+	public static NX Increment(in NX Num) => Num + ONE;
+	public static NX Decrement(in NX Num) => Num - ONE;
+	public static NX RecSB(in NX Num) => ONE / Num;
 	public static NX RecNR(in NX Num){
 		// ¶ Safeguard:
 		if(Abs(Num) == ZERO){
@@ -70,13 +70,53 @@ public static class MathY{
 		int i = 0;
 		while(i <= NX.PRECISION && MatchingDigits(Rec, _Rec) <= NX.PRECISION){
 			_Rec = Rec;
-			RefineNR(Num, ref Rec);
+			Rec += Rec * (ONE - Rec * Num);
 			i++;
 		}
 		// Return
 		return Rec;
-		// ¶ Local Newton-Raphson Iteration:
-		void RefineNR(in NX Target, ref NX Guess) => Guess += Guess * (ONE - Guess * Target);
+	}
+	public static NX ExpTS(NX Num){
+		// ¶ Init:
+		NX R = ZERO.Based(Num.Base);
+		NX N = ZERO.Based(Num.Base);
+		NX I = ONE.Based(Num.Base);
+		// ¶ Taylor series:
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION - Num.Powr){
+			I  = (Num ^ N) / !N;
+			R += I;
+			N++;
+			i++;
+		}
+		// Return
+		return R;
+	}
+	public static NX LnEH(NX Num){
+		// ¶ Base cases:
+		if(Abs(Num) == ZERO){
+			return NEG_INF;
+		}
+		if(Num == ONE){return ZERO.Based(Num);}
+		// ¶ Safeguard:
+		if(Num < ZERO){
+			Console.Error.WriteLine("\tError:\nThe natural logarithm of a negative number was attempted!");
+			return null!;
+		}
+		if(Num == ZERO){return NEG_INF;}
+		// ¶ Init:
+		NX  Ln = NX.New(Math.Log((double)Num), Num.Base);
+		NX _Ln = new NX{Base = Num.Base};
+		// ¶ Edmond Halley Iterations:
+		int i = 0;
+		while(i <= NX.PRECISION && MatchingDigits(Ln, _Ln) <= NX.PRECISION){
+			NX Exp = ExpTS(Ln);
+			_Ln = Ln;
+			Ln += TWO * (Num - Exp) / (Num + Exp);
+			i++;
+		}
+		// Return
+		return Ln;
 	}
 	public static NX FacSB(NX Num){
 		// ¶ Safeguard:
@@ -94,22 +134,6 @@ public static class MathY{
 		}
 		// Return:
 		return Fac;
-	}
-	public static NX EToTS(NX Num){
-		// ¶ Init:
-		NX R = ZERO.Based(Num.Base);
-		NX N = ZERO.Based(Num.Base);
-		NX I = ONE.Based(Num.Base);
-		// ¶ Taylor series:
-		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
-			I  = (Num ^ N) / !N;
-			R += I;
-			N++;
-			i++;
-		}
-		// Return
-		return R;
 	}
 	// § Trigometric:
 	public static NX CosTS(in NX Num){
@@ -231,6 +255,11 @@ public static class MathY{
 		C.Simplify();
 		// Return
 		return C;
+	}
+	public static NX Mul(in NX A, in NX B){
+		int Length = A.Size + B.Size;
+		if(Length > 300){return MulAK(A, B);}
+		return MulSB(A, B);
 	}
 	public static NX MulSB(in NX A, in NX B){
 		// ¶ Safeguard:
@@ -419,15 +448,15 @@ public static class MathY{
 		// Return
 		return A.Signed(Sign);
 	}
-	public static NX ExpSQ(in NX A, NX B){
+	public static NX PowSQ(in NX A, NX B){
 		// ¶ Safeguard:
 		if(A | B){
 			if(!(A & B)){
 				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
 				return null!;
 			}
-			if(A.Base == 0){return ExpSQ(A.Based(B), B);}
-			else{return ExpSQ(A, B.Based(A));}
+			if(A.Base == 0){return PowSQ(A.Based(B), B);}
+			else{return PowSQ(A, B.Based(A));}
 		}
 		if(!(A & B)){
 			Console.Error.WriteLine("\tError:\nAttempted to exponentiate numbers with different bases!");
@@ -439,25 +468,81 @@ public static class MathY{
 		}
 		// ¶ Base cases:
 		if(A == -ONE){
-			if(IsEven(B)){return ONE.Based(A.Base);}
-			else{return -ONE.Based(A.Base);}
+			if(IsEven(B)){return ONE.Based(A);}
+			else{return -ONE.Based(A);}
 		}
 		if(B == ONE){return A;}
-		if(A == ONE || B == ZERO){return ONE.Based(A.Base);}
+		if(A == ONE || B == ZERO){return ONE.Based(A);}
+		if(A == BASE_ID){return ONE.Based(A) >> (int)B;}
 		// ¶ Init:
 		NX C = new NX();
 		// ¶ Binary divide and conquer recursion:
 		if(IsEven(B)){
-			C  = ExpSQ(A, B / TWO);
+			C  = PowSQ(A, B / TWO);
 			C *= C;
 		} else{
 			B--;
-			C  = ExpSQ(A, B / TWO);
+			C  = PowSQ(A, B / TWO);
 			C *= C;
 			C *= A;
 		}
 		// Return
 		return C;
+	}
+	public static NX PowLN(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return PowLN(A.Based(B), B);}
+			else{return PowLN(A, B.Based(A));}
+		}
+		if(!(A & B)){
+			Console.Error.WriteLine("\tError:\nAttempted to exponentiate numbers with different bases!");
+			return null!;
+		}
+		// ¶ Base cases:
+		if(A == -ONE){
+			if(IsEven(B)){return ONE.Based(A.Base);}
+			else{return -ONE.Based(A.Base);}
+		}
+		if(B == ONE){return A;}
+		if(A == ONE || B == ZERO){return ONE.Based(A.Base);}
+		// Return
+		return ExpTS(B * LnEH(A));
+	}
+	public static NX LogLN(NX A, NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return PowLN(A.Based(B), B);}
+			else{return PowLN(A, B.Based(A));}
+		}
+		if(!(A & B)){
+			Console.Error.WriteLine("\tError:\nThe logarithm of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Safeguard:
+		if(B < ZERO){
+			Console.Error.WriteLine("\tError:\nThe logarithm of a negative number was attempted!");
+			return null!;
+		}
+		if(B == ZERO){return NEG_INF;}
+		// ¶ Init:
+		NX LnA = new NX{Base = A.Base};
+		NX LnB = new NX{Base = B.Base};
+		// ¶ Compute:
+		Parallel.Invoke(
+			() => LnA = LnEH(A),
+			() => LnB = LnEH(B)
+		);
+		// Return
+		return LnA / LnB;
 	}
 	// *** N-Ary operations:
 	public static NX Summation(in NX[] Numbers){
@@ -487,10 +572,12 @@ public static class MathY{
 		NX N = ONE.Based(Base);
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
-		while(I > ONE << NX.PRECISION){
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
 			I  = ~!N;
 			E += I;
 			N++;
+			i++;
 		}
 		// Return
 		return E;
@@ -506,10 +593,12 @@ public static class MathY{
 		NX N = ONE.Based(Base);
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
-		while(I > ONE << NX.PRECISION){
+		int i = 0;
+		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
 			I  = ((TWO ^ N) * (!N ^ TWO))/!(ONE + TWO * N);
 			P += I;
 			N++;
+			i++;
 		}
 		// Return
 		return TWO * P;

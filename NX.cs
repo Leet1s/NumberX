@@ -117,21 +117,21 @@ public class NX{
 		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
 	// *** Indexers
-	public short this[int Index]{
+	public short this[in int Index]{
 		get{
 			if(Index < 0 || Index >= this.Size){return 0;}
 			return this.Nums[Index];
 		}
 		set => this.Nums[Index] = value;
 	}
-	public short this[Index Index]{
+	public short this[in Index Index]{
 		get => this[Index.Value];
 		set => this[Index.Value] = value;
 	}
-	public short[] this[int Start, int End]{
+	public short[] this[in int Start, in int End]{
 		get => this.Nums[Start .. End];
 	}
-	public short[] this[System.Range Range]{
+	public short[] this[in System.Range Range]{
 		get{
 			short[] Result = new short[Range.End.Value - Range.Start.Value];
 			int j = 0;
@@ -140,39 +140,35 @@ public class NX{
 		}
 	}
 	// *** Operator methods:
-	public static NX operator >>(NX Num, int Shift) => Num.ShiftPow(Shift);
-	public static NX operator <<(NX Num, int Shift) => Num.ShiftPow(-Shift);
+	public static NX operator >>(in NX Num, in int Shift) => Num.ShiftPow(Shift);
+	public static NX operator <<(in NX Num, in int Shift) => Num.ShiftPow(-Shift);
 	public static NX operator ++(NX Num) => Num = MathY.Increment(Num);
 	public static NX operator --(NX Num) => Num = MathY.Decrement(Num);
-	public static NX operator ~(NX Num) => MathY.RecSB(Num);
-	public static NX operator !(NX Num) => MathY.FacSB(Num);
-	public static NX operator +(NX Num) => Num;
-	public static NX operator -(NX Num) => MathY.Negate(Num);
-	public static NX operator +(NX A, NX B) => MathY.SumSB(A, B);
-	public static NX operator -(NX A, NX B) => MathY.SumSB(A, -B);
-	public static NX operator *(NX A, NX B){
-		int Length = A.Size + B.Size;
-		if(Length > 300){return MathY.MulAK(A, B);}
-		return MathY.MulSB(A, B);
-	}
-	public static NX operator /(NX A, NX B) => MathY.DivSB(A, B);
-	public static NX operator %(NX A, NX B) => MathY.ModSB(A, B);
-	public static NX operator ^(NX A, NX B) => MathY.ExpSQ(A, B);
+	public static NX operator ~(in NX Num) => MathY.RecSB(Num);
+	public static NX operator !(in NX Num) => MathY.FacSB(Num);
+	public static NX operator +(in NX Num) => Num;
+	public static NX operator -(in NX Num) => MathY.Negate(Num);
+	public static NX operator +(in NX A, in NX B) => MathY.SumSB(A, B);
+	public static NX operator -(in NX A, in NX B) => MathY.SumSB(A, -B);
+	public static NX operator *(in NX A, in NX B) => MathY.Mul(A, B);
+	public static NX operator /(in NX A, in NX B) => MathY.DivSB(A, B);
+	public static NX operator %(in NX A, in NX B) => MathY.ModSB(A, B);
+	public static NX operator ^(in NX A, in NX B) => MathY.PowSQ(A, B);
 	// § Comparators:
-	public static bool operator ==(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
-	public static bool operator !=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
-	public static bool operator  >(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.MORE;
-	public static bool operator  <(NX A, NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
-	public static bool operator >=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
-	public static bool operator <=(NX A, NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
-	public static bool operator  &(NX A, NX B) => A.Base != B.Base;
-	public static bool operator  |(NX A, NX B) => A.Base == 0 | B.Base == 0;
+	public static bool operator ==(in NX A, in NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
+	public static bool operator !=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
+	public static bool operator  >(in NX A, in NX B) => MathY.Compare(A, B) == MathY.COMP.MORE;
+	public static bool operator  <(in NX A, in NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
+	public static bool operator >=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
+	public static bool operator <=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
+	public static bool operator  &(in NX A, in NX B) => A.Base != B.Base;
+	public static bool operator  |(in NX A, in NX B) => A.Base == 0 | B.Base == 0;
 	public override bool Equals(object? Obj) => ReferenceEquals(this, Obj);
 	public override int GetHashCode() => base.GetHashCode();
 	// *** Conversion:
 	public override string ToString() => this.ToStrB64();
-	public static explicit operator double(NX Num) => Num.ToDouble();
-	public static explicit operator long(NX Num) => Num.ToLong();
+	public static explicit operator double(in NX Num) => Num.ToDouble();
+	public static explicit operator long(in NX Num) => Num.ToLong();
 	public string ToStrB64(in bool BEndian = true){
 		if(this.Base > 64){
 			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B64's range!");
@@ -233,6 +229,8 @@ public class NX{
 		return Temp;
 	}
 	internal short NumAtPow(in int Pow) => this[Pow - this.Powr];
+	internal NX Segment(in int Start, in int End) => new NX(this.Sign, this[Start .. End], this.Base, this.Powr + Start);
+	internal NX Segment(in Range range) => new NX(this.Sign, this[range], this.Base, this.Powr + range.Start.Value);
 	// § Helper Functions:
 	private static bool StrSign(in string Sign) => "-".Equals(Sign);
 	private static short[] StrNums(string Digits, in bool BEndian){
@@ -240,13 +238,13 @@ public class NX{
 		if(Digits == null){return new short[1]{0};}
 		// ¶ Init:
 		short[] Nums = new short[Digits.Length];
-		if(BEndian){Digits = (string) Digits.Reverse();}
+		if(BEndian){Digits = (string)Digits.Reverse();}
 		// ¶ Decoding:
-		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short) B64.IndexOf(Digits[i]);}
+		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short)B64.IndexOf(Digits[i]);}
 		// Return:
 		return Nums;
 	}
-	private static int StrPowr(string Power, string Num, in byte Base, in bool BEndian){
+	private static int StrPowr(string Power, in string Num, in byte Base, in bool BEndian){
 		// ¶ Safeguard:
 		if(Power == null || Power.Length == 0){return 0;}
 		// ¶ Init:
@@ -281,14 +279,14 @@ public class NX{
 		// ¶ Convertion:
 		for(int i = Pow; i >= 0; i--){
 			short Temp = (short)(Value / Math.Pow(Base, i));
-			Value     -= (long)  (Temp * Math.Pow(Base, i));
+			Value     -= (long)(Temp * Math.Pow(Base, i));
 			Nums[i]    = Temp;
 		}
 		// Return:
 		return Nums;
 	}
 	internal bool IsOverLoaded(){
-		foreach(short i in this.Nums){if(i < 0 || i > this.Base){return true;}}
+		foreach(short i in this.Nums){if(i < 0 | i > this.Base){return true;}}
 		return false;
 	}
 	// *** Cleaners:
