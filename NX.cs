@@ -82,7 +82,7 @@ public class NX{
 		bool    Sign = Num < 0;
 		short[] Nums = new short[PRECISION];
 		Num          = Math.Abs(Num);
-		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
+		int     Powr = Num != 0 ? (int)(Math.Log2(Num) / Math.Log2(Base)) : 0;
 		// ¶ Conversion:
 		int j = 0;
 		for(int i = Powr; i > Powr - PRECISION; i--){
@@ -101,10 +101,10 @@ public class NX{
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		int     Powr = (int)(Math.Log2(Math.Abs(Num)) / Math.Log2(Base));
+		uint    Powr = (uint)(Math.Log2(Num) / Math.Log2(Base));
 		short[] Nums = ToNums(Num, Base, Powr);
 		// Return:
-		return new NX(Sign, Nums, Base, Powr);
+		return new NX(Sign, Nums, Base, (int)Powr);
 	}
 	// *** Getters & Setters:
 	// § Getters:
@@ -192,10 +192,12 @@ public class NX{
 		Str += '^' + this.Powr < 0 ? '-' : '+';
 		short[] Pow;
 		if(BEndian){
-			int PowrPow = (int)(Math.Log2(Math.Abs(this.Powr)) / Math.Log2(this.Base));
+			uint PowrPow = (uint)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+			if(this.Powr == 0){PowrPow = 0;}
 			Pow = ToNums(this.Powr, this.Base, PowrPow);
 		} else{
-			int PowrPow = (int)(Math.Log2(Math.Abs(this.LowPow)) / Math.Log2(this.Base));
+			uint PowrPow = (uint)(Math.Log2(this.LowPow) / Math.Log2(this.Base));
+			if(this.Powr == 0){PowrPow = 0;}
 			Pow = ToNums(this.LowPow, this.Base, PowrPow);
 		}
 		if(BEndian)
@@ -223,7 +225,7 @@ public class NX{
 		Str += '*' + B64[this.Base];
 		// ¶ Power indicator:
 		Str += '^' + this.Powr < 0 ? '-' : '+';
-		int PowrPow = (int)(Math.Log2(Math.Abs(this.Powr)) / Math.Log2(this.Base));
+		uint PowrPow = (uint)(Math.Log2(this.Powr) / Math.Log2(this.Base));
 		short[] Pow = ToNums(this.Powr, this.Base, PowrPow);
 		for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
 		// Return
@@ -294,7 +296,7 @@ public class NX{
 		// Return:
 		return Pow;
 	}
-	private static short[] ToNums(long Value, in byte Base, in int Powr){
+	private static short[] ToNums(long Value, in byte Base, in uint Powr){
 		// ¶ Safeguard:
 		if(Base < 2){
 			Console.Error.WriteLine("\tError:\nAtempted to convert a number at an invalid base.");
@@ -305,7 +307,7 @@ public class NX{
 		short[] Nums = new short[Powr +1];
 		// ¶ Convertion:
 		int j = 0;
-		for(int i = Powr; i >= 0; i--){
+		for(uint i = Powr; i >= 0; i--){
 			short Temp = (short)(Value / Math.Pow(Base, i));
 			Value     -= (long)(Temp * Math.Pow(Base, i));
 			Nums[j++]  = Temp;
