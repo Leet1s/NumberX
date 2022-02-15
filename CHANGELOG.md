@@ -4,6 +4,10 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 1.0.0
+* !: Changed Nums to Big Endianness representation, as well as everything that it impacts
+* *: Parallelized SingleMul
+* +: Newton-Raphson algorithm for the nth root
 ## 0.3.2
 * *: Added 'in' to several NX function parameters to make them more memory efficient
 * *: ExpSQ -> PowSQ && EToTS -> ExpTS

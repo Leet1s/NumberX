@@ -30,24 +30,21 @@ public static class MathY{
 	public static readonly NX ZERO    = new NX(false, new short[]{0}, 0, 0);
 	public static readonly NX ONE     = new NX(false, new short[]{1}, 0, 0);
 	public static readonly NX TWO     = new NX(false, new short[]{2}, 0, 0);
-	public static readonly NX BASE_ID = new NX(false, new short[]{0, 1}, 0, 0);
+	public static readonly NX BASE_ID = new NX(false, new short[]{1, 0}, 0, 0);
 	public static readonly NX POS_INF = new NX(false, new short[]{short.MaxValue}, 0, int.MaxValue);
 	public static readonly NX NEG_INF = new NX(true , new short[]{short.MaxValue}, 0, int.MaxValue);
 	// *** Unary operations:
 	public static NX Floor(in NX Num){
-		if(Num.Powr >= 0){return Num;}
-		try{return new NX(Num.Sign, Num[-Num.Powr, Num.Size], Num.Base, 0);}
-		catch{return ZERO.Based(Num);}
+		if(Num.LowPow >= 0){return Num;}
+		if(Num.Powr < 0){return ZERO.Based(Num);}
+		return new NX(Num.Sign, Num[0, Num.Size - Num.Powr -1], Num.Base, Num.Powr);
 	}
 	public static NX Ceil(in NX Num){
 		NX Res = Floor(Num);
 		if(Num > Res){Res++;}
 		return Res;
 	}
-	public static NX Abs(NX Num){
-		Num.Sign = false;
-		return Num;
-	}
+	public static NX Abs(in NX Num) => Num.Signed(false);
 	public static NX Negate(NX Num){
 		Num.Sign = !Num.Sign;
 		return Num;
@@ -83,7 +80,7 @@ public static class MathY{
 		NX I = ONE.Based(Num.Base);
 		// ¶ Taylor series:
 		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION - Num.Powr){
+		while(i <= NX.PRECISION && I > ONE >> NX.PRECISION - Num.LowPow){
 			I  = (Num ^ N) / !N;
 			R += I;
 			N++;
@@ -143,7 +140,7 @@ public static class MathY{
 		NX I = ONE.Based(Num.Base);
 		// ¶ Taylor series:
 		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+		while(i <= NX.PRECISION && I > ONE >> NX.PRECISION - Num.LowPow){
 			I  = ((-ONE) ^ N) / !(TWO * N) * (Num ^ (TWO * N));
 			C += I;
 			N++;
@@ -159,7 +156,7 @@ public static class MathY{
 		NX I = ONE.Based(Num.Base);
 		// ¶ Taylor series:
 		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+		while(i <= NX.PRECISION && I > ONE >> NX.PRECISION - Num.LowPow){
 			I  = ((-ONE) ^ N) / !(TWO * N + ONE) * (Num ^ (TWO * N + ONE));
 			S += I;
 			N++;
@@ -283,7 +280,7 @@ public static class MathY{
 			A.Powr + B.Powr
 		);
 		// ¶ Multiplication:
-		for(int i = 0; i < B.Size; i++){C += SingleMul(A, B[i])>>(i + B.Powr);}
+		for(int i = 0; i < B.Size; i++){C += SingleMul(A, B[i])<<(i + B.LowPow);}
 		// Return:
 		return C;
 	}
@@ -320,9 +317,9 @@ public static class MathY{
 		// Return:
 		return 
 			(L 
-			+ ((M - L - H)>>(A.Size / 2))
-			+ (H >>(A.Size))
-			)>>(A.Powr + B.Powr);
+			+ ((M - L - H)<<(A.Size / 2))
+			+ (H <<(A.Size))
+			)<<(A.Powr + B.Powr);
 	}
 	public static NX DivSB(NX A, in NX B){
 		// ¶ Safeguard:
@@ -343,30 +340,26 @@ public static class MathY{
 			if(A.Sign){return NEG_INF;}
 			return POS_INF;
 		}
-		if(B.Equals(POS_INF) || B.Equals(NEG_INF)){return ZERO.Based(B.Base);}
-		if(A.Size < B.Size){return DivSB(B, A);}
+		if(B.Equals(POS_INF) | B.Equals(NEG_INF)){return ZERO.Based(B.Base);}
 		// ¶ Init:
 		NX C = new NX(
 			A.Sign ^ B.Sign,
 			new short[NX.PRECISION],
 			A.Base,
-			A.LastPow - B.LastPow - NX.PRECISION +1
+			A.Powr - B.Powr
 		);
 		NX[] TableB = new NX[B.Base];
 		for(int i = 0; i < TableB.Length; i++){TableB[i] = SingleMul(B, i);}
 		// ¶ Division:
-		int Shift = A.LastPow - B.LastPow;
-		int j = 0;
-		for(int i = C.Size -1; i >= 0; i--){
-			C[i] = (short)BinSrc(TableB, A << Shift - j);
-			A   -= TableB[C[i]] >> Shift - j;
-			j++;
+		for(int i = 0; i >= C.Size; i++){
+			C[i] = (short)BinSrc(TableB, A >> C.Powr - i);
+			A   -= TableB[C[i]] << C.Powr - i;
 		}
 		// Return:
 		C.Simplify();
 		return C;
 	}
-	public static NX DivNR(NX A, NX B){
+	public static NX DivNR(in NX A, in NX B){
 		// ¶ Safeguard:
 		if(A | B){
 			if(!(A & B)){
@@ -381,7 +374,7 @@ public static class MathY{
 			return null!;
 		}
 		// Return
-		return (A.Signed(A.Sign ^ B.Sign) << (B.LastPow +1)) * RecNR(Abs(B) << (B.LastPow +1));
+		return (A.Signed(A.Sign ^ B.Sign) >> (B.Powr +1)) * RecNR(Abs(B) >> (B.Powr +1));
 		}
 	public static NX DivRG(NX A, NX B){
 		// Safeguard:
@@ -400,11 +393,11 @@ public static class MathY{
 		// ¶ Init:
 		A.Sign ^= B.Sign;
 		B.Sign  = false;
-		A     <<= B.LastPow +1;
-		B     <<= B.LastPow +1;
+		A     >>= B.Powr +1;
+		B     >>= B.Powr +1;
 		// ¶ Division:
 		int i = 0;
-		while(ONE - B > ONE << NX.PRECISION && i <= NX.PRECISION){
+		while(ONE - B > ONE >> NX.PRECISION && i <= NX.PRECISION){
 			NX F = TWO - B;
 			Parallel.Invoke(
 				() => A *= F,
@@ -439,10 +432,10 @@ public static class MathY{
 		NX[] TableB = new NX[B.Base];
 		for(int i = 0; i < TableB.Length; i++){TableB[i] = SingleMul(Abs(B), i);}
 		// ¶ Modulus:
-		int Shift = A.LastPow - B.LastPow;
+		int Shift = A.Powr - B.Powr;
 		int j = 0;
 		while(A >= Abs(B)){
-			A -= TableB[BinSrc(TableB, A << Shift - j)] >> Shift - j;
+			A -= TableB[BinSrc(TableB, A >> Shift - j)] << Shift - j;
 			j++;
 		}
 		// Return
@@ -473,7 +466,7 @@ public static class MathY{
 		}
 		if(B == ONE){return A;}
 		if(A == ONE || B == ZERO){return ONE.Based(A);}
-		if(A == BASE_ID){return ONE.Based(A) >> (int)B;}
+		if(A == BASE_ID){return ONE.Based(A) << (int)B;}
 		// ¶ Init:
 		NX C = new NX();
 		// ¶ Binary divide and conquer recursion:
@@ -527,7 +520,6 @@ public static class MathY{
 			Console.Error.WriteLine("\tError:\nThe logarithm of numbers with different bases was attempted!");
 			return null!;
 		}
-		// ¶ Safeguard:
 		if(B < ZERO){
 			Console.Error.WriteLine("\tError:\nThe logarithm of a negative number was attempted!");
 			return null!;
@@ -543,6 +535,53 @@ public static class MathY{
 		);
 		// Return
 		return LnA / LnB;
+	}
+	public static NX RootNR(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return RootNR(A.Based(B), B);}
+			else{return RootNR(A, B.Based(A));}
+		}
+		if(!(A & B)){
+			Console.Error.WriteLine("\tError:\nThe root of numbers with different bases was attempted!");
+			return null!;
+		}
+		// ¶ Init:
+		NX  Root = NX.New(Math.Pow((double)A, 1 / (double)B), A.Base);
+		NX _Root = new NX{Base = A.Base};
+		NX BmO   = B - ONE;
+		NX B1B   = BmO / B;
+		NX AdB   = A / B;
+		// ¶ Newton-Raphson Iterations:
+		int i = 0;
+		while(i <= NX.PRECISION && MatchingDigits(Root, _Root) <= NX.PRECISION){
+			_Root = Root;
+			Root += B1B * Root + AdB / (Root ^ BmO);
+			i++;
+		}
+		// Return
+		return Root;
+	}
+	public static NX RootLN(in NX A, in NX B){
+		// ¶ Safeguard:
+		if(A | B){
+			if(!(A & B)){
+				Console.Error.WriteLine("\tError:\nAn operation with dual zero base was attempted!");
+				return null!;
+			}
+			if(A.Base == 0){return RootNR(A.Based(B), B);}
+			else{return RootNR(A, B.Based(A));}
+		}
+		if(!(A & B)){
+			Console.Error.WriteLine("\tError:\nThe root of numbers with different bases was attempted!");
+			return null!;
+		}
+		// Return
+		return ExpTS(~B * LnEH(A));
 	}
 	// *** N-Ary operations:
 	public static NX Summation(in NX[] Numbers){
@@ -573,7 +612,7 @@ public static class MathY{
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
 		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+		while(i <= NX.PRECISION && I > ONE>> NX.PRECISION){
 			I  = ~!N;
 			E += I;
 			N++;
@@ -594,7 +633,7 @@ public static class MathY{
 		NX I = ONE.Based(Base);
 		// ¶ Iterations:
 		int i = 0;
-		while(i <= NX.PRECISION && I > ONE << NX.PRECISION){
+		while(i <= NX.PRECISION && I > ONE>> NX.PRECISION){
 			I  = ((TWO ^ N) * (!N ^ TWO))/!(ONE + TWO * N);
 			P += I;
 			N++;
@@ -604,14 +643,16 @@ public static class MathY{
 		return TWO * P;
 	}
 	// *** Helpers:
-	internal static (int LB, int HB) PowerBounds(in NX Num) => (Num.Powr, Num.Powr + Num.Size -1);
+	internal static (int LB, int HB) PowerBounds(in NX Num) => (Num.LowPow, Num.Powr);
 	private  static (int LB, int HB) PowerBounds(in NX A, in NX B){
-		int LBound = Math.Min(A.Powr, B.Powr);
-		int HBound = Math.Max(A.Powr + A.Size -1, B.Powr + B.Size -1);
+		int LBound = Math.Min(A.LowPow, B.LowPow);
+		int HBound = Math.Max(A.Powr, B.Powr);
 		return (LBound, HBound);
 	}
-	private static NX SingleMul(NX Num, in int Fac){
-		for(int i = 0; i < Num.Size; i++){Num[i] *= (short) Fac;}
+	private static NX SingleMul(NX Num, int Fac){
+		Parallel.For(0, Num.Size, i => {
+			Num[i] *= (short)Fac;
+		});
 		Num.CBCleanUp();
 		return Num;
 	}
@@ -655,11 +696,11 @@ public static class MathY{
 		while(A.Nums?[i] == B.Nums?[i]){i++;}
 		return i;
 	}
-	public static bool IsInteger(in NX Num) => Num.Powr >= 0;
+	public static bool IsInteger(in NX Num) => Num.LowPow >= 0;
 	public static bool IsEven(in NX Num){
 		bool Even = Num.NumAtPow(0) % 2 == 0;
-		if(Num.Base % 2 == 0 | Num.Powr + Num.Size <= 1){return Even;}
-		for(int i = 1; i < Num.Powr + Num.Size; i++){Even ^= Num.NumAtPow(i) % 2 != 0;}
+		if(Num.Base % 2 == 0 | Num.LowPow < 0){return Even;}
+		for(int i = 1; i <= Num.Powr; i++){Even ^= Num.NumAtPow(i) % 2 != 0;}
 		return Even;
 	}
 }

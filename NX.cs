@@ -31,7 +31,7 @@ public class NX{
 	internal volatile static ushort PRECISION = 32;
 	// § Regex:
 	private const string B64     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#";
-	private const string Pattern = @"^([<>])([+-])?(([0-9a-zA-Z@#]*)[,\.]?([0-9a-zA-Z@#]*))(\*[2-9a-zA-Z])(\^[+-]?[0-9a-zA-Z@#]+)?$";
+	private const string Pattern = @$"^([<>])([+-])?(([{B64}]*)[,\.]?([{B64}]*))(\*[2-9a-zA-Z@#])(\^[+-]?[{B64}]+)?$";
 	private static Regex RE      = new Regex(Pattern);
 	// *** Self attributes:
 	internal bool    Sign = false;
@@ -52,7 +52,7 @@ public class NX{
 		this.Powr = Num.Powr;
 	}
 	internal NX(){}
-	// *** Builder:
+	// *** Builders:
 	// * String B62 Builder
 	public static NX New(in string Num){
 		// ¶ Safeguard (Checks for correct usage of syntax):
@@ -75,42 +75,42 @@ public class NX{
 	public static NX New(double Num, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
-			Console.Error.WriteLine("\tError:\nAttempted to create a NX with an invalid base!");
+			Console.Error.WriteLine("\tError:\nAttempted to create a NX at an invalid base!");
 			return null!;
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		Num          = Math.Abs(Num);
 		short[] Nums = new short[PRECISION];
+		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
+		Num          = Math.Abs(Num);
 		// ¶ Conversion:
-		int j   = Nums.Length;
-		int Pow = (int)(Math.Log2(Num) / Math.Log2(Base));
-		for(int i = Pow; i > Pow - PRECISION; i--){
+		int j = 0;
+		for(int i = Powr; i > Powr - PRECISION; i--){
 			short Temp = (short)(Num / Math.Pow(Base, i));
 			Num       -= Temp * Math.Pow(Base, i);
-			Nums[--j]  = Temp;
+			Nums[j++]  = Temp;
 		}
-		int Powr = Pow - Nums.Length;
 		// Return:
 		return new NX(Sign, Nums, Base, Powr);
 	}
 	// * Integer builder
-	public static NX New(long Num, in byte Base = 2){
+	public static NX New(in long Num, in byte Base = 2){
 		// ¶ Safeguard:
 		if(Base < 2){
-			Console.Error.WriteLine("\tError:\nAttempted to create a NX with an invalid base!");
+			Console.Error.WriteLine("\tError:\nAttempted to create a NX at an invalid base!");
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		short[] Nums = ToNums(Num, Base);
+		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
+		short[] Nums = ToNums(Num, Base, Powr);
 		// Return:
-		return new NX(Sign, Nums, Base, 0);
+		return new NX(Sign, Nums, Base, Powr);
 	}
 	// *** Getters & Setters:
 	// § Getters:
 	public int Size => this.Nums.Length;
 	public static ushort GetPrecision() => PRECISION;
-	public int LastPow => this.Powr + this.Size -1;
+	public int LowPow => this.Powr - this.Size +1;
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
@@ -140,8 +140,8 @@ public class NX{
 		}
 	}
 	// *** Operator methods:
-	public static NX operator >>(in NX Num, in int Shift) => Num.ShiftPow(Shift);
-	public static NX operator <<(in NX Num, in int Shift) => Num.ShiftPow(-Shift);
+	public static NX operator <<(in NX Num, in int Shift) => Num.ShiftPow(Shift);
+	public static NX operator >>(in NX Num, in int Shift) => Num.ShiftPow(-Shift);
 	public static NX operator ++(NX Num) => Num = MathY.Increment(Num);
 	public static NX operator --(NX Num) => Num = MathY.Decrement(Num);
 	public static NX operator ~(in NX Num) => MathY.RecSB(Num);
@@ -170,6 +170,7 @@ public class NX{
 	public static explicit operator double(in NX Num) => Num.ToDouble();
 	public static explicit operator long(in NX Num) => Num.ToLong();
 	public string ToStrB64(in bool BEndian = true){
+		// ¶ Safeguard:
 		if(this.Base > 64){
 			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B64's range!");
 			return "";
@@ -180,23 +181,52 @@ public class NX{
 		Str += this.Sign ? '-' : '+';
 		// ¶ Digits sequence:
 		if(BEndian)
-			for(int i = this.Size; --i >= 0;)
+			for(int i = 0; i < this.Size; i++)
 				Str  += B64[this[i]];
 		else
-			for(int i = 0; i < this.Size; i++)
+			for(int i = this.Size; --i >= 0;)
 				Str  += B64[this[i]];
 		// ¶ Base indicator:
 		Str += '*' + B64[this.Base];
 		// ¶ Power indicator:
 		Str += '^' + this.Powr < 0 ? '-' : '+';
-		short[] Pow = ToNums(this.Powr, this.Base);
+		short[] Pow;
+		if(BEndian){
+			int PowrPow = (int)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+			Pow = ToNums(this.Powr, this.Base, PowrPow);
+		} else{
+			int PowrPow = (int)(Math.Log2(this.LowPow) / Math.Log2(this.Base));
+			Pow = ToNums(this.LowPow, this.Base, PowrPow);
+		}
 		if(BEndian)
-			for(int i = Pow.Length; --i >= 0;)
-				Str += B64[Pow[i]];
+			for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
 		else
-			for(int i = 0; i < Pow.Length; i++)
-				Str += B64[Pow[i]];
+			for(int i = Pow.Length; --i >= 0;){Str += B64[Pow[i]];}
 		// Return:
+		return Str;
+	}
+	public string ToStrB64Sci(in int Digits = int.MaxValue){
+		// ¶ Safeguard:
+		if(this.Base > 64){
+			Console.Error.WriteLine("\tError:\nAttempted to write a NX with a base outside of the B64's range!");
+			return "";
+		}
+		// ¶ Endianness indicator:
+		string Str = ">";
+		// ¶ Sign indicator:
+		Str += this.Sign ? '-' : '+';
+		// ¶ Digits sequence:
+		Str += B64[this[0]] + '.';
+		int Len = Math.Min(this.Size, Digits);
+		for(int i = 1; i < Len; i++){Str += B64[this[i]];}
+		// ¶ Base indicator:
+		Str += '*' + B64[this.Base];
+		// ¶ Power indicator:
+		Str += '^' + this.Powr < 0 ? '-' : '+';
+		int PowrPow = (int)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+		short[] Pow = ToNums(this.Powr, this.Base, PowrPow);
+		for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
+		// Return
 		return Str;
 	}
 	public double ToDouble(){
@@ -204,7 +234,7 @@ public class NX{
 		double Value = 0;
 		double Sign  = this.Sign ? -1 : 1;
 		// ¶ Sum of Nums:
-		for(int i = 0; i < this.Size; i++){Value += Sign * this[i] * Math.Pow(this.Base, i + this.Powr);}
+		for(int i = 0; i < this.Size; i++){Value += Sign * this[i] * Math.Pow(this.Base, this.Powr - i);}
 		// Return:
 		return Value;
 	}
@@ -228,9 +258,9 @@ public class NX{
 		Temp.Powr += Shift;
 		return Temp;
 	}
-	internal short NumAtPow(in int Pow) => this[Pow - this.Powr];
-	internal NX Segment(in int Start, in int End) => new NX(this.Sign, this[Start .. End], this.Base, this.Powr + Start);
-	internal NX Segment(in Range range) => new NX(this.Sign, this[range], this.Base, this.Powr + range.Start.Value);
+	internal short NumAtPow(in int Pow) => this[this.Powr - Pow];
+	internal NX Segment(in int Start, in int End) => new NX(this.Sign, this[Start .. End], this.Base, this.Powr - Start);
+	internal NX Segment(in Range range) => new NX(this.Sign, this[range], this.Base, this.Powr - range.Start.Value);
 	// § Helper Functions:
 	private static bool StrSign(in string Sign) => "-".Equals(Sign);
 	private static short[] StrNums(string Digits, in bool BEndian){
@@ -238,35 +268,33 @@ public class NX{
 		if(Digits == null){return new short[1]{0};}
 		// ¶ Init:
 		short[] Nums = new short[Digits.Length];
-		if(BEndian){Digits = (string)Digits.Reverse();}
+		if(!BEndian){Digits = (string)Digits.Reverse();}
 		// ¶ Decoding:
 		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short)B64.IndexOf(Digits[i]);}
 		// Return:
 		return Nums;
 	}
-	private static int StrPowr(string Power, in string Num, in byte Base, in bool BEndian){
+	private static int StrPowr(string? Power, in string Num, in byte Base, in bool BEndian){
 		// ¶ Safeguard:
 		if(Power == null || Power.Length == 0){return 0;}
 		// ¶ Init:
-		int PowSign;
-		Power   = Power[1 .. ^0];
-		if(Power[0] == '-'){PowSign = -1;}
-			else{PowSign = 1;}
-		if(Power[0] is '+' or '-'){Power = Power[1..^0];}
-		if(BEndian){Power = (string) Power.Reverse();}
-		// ¶ Sums the power:
+		Power = Power[1 .. ^0];
+		int PowSign = Power[0] == '-' ? -1 : 1;
+		if(Power[0] is '+' or '-'){Power = Power[1 .. ^0];}
+		int FP = Num.IndexOf('.');
 		int Pow;
-		int ID = Num.IndexOf('.');
-		if(ID == -1){Pow = 0;}
+		if(FP == -1){Pow = 0;}
 		else{
-			if(BEndian){Pow = ID - (Num.Length -1);}
-			else{Pow = -ID;}
+			if(BEndian){Pow = FP -1;}
+			else{Pow = Num.Length - FP -2;}
 		}
+		if(!BEndian){Power = (string)Power.Reverse();}
+		// ¶ Sums the power:
 		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
 		// Return:
 		return Pow;
 	}
-	private static short[] ToNums(long Value, in byte Base = 2){
+	private static short[] ToNums(long Value, in byte Base, in int Powr){
 		// ¶ Safeguard:
 		if(Base < 2){
 			Console.Error.WriteLine("\tError:\nAtempted to convert a number at an invalid base.");
@@ -274,13 +302,13 @@ public class NX{
 		}
 		// ¶ Init:
 		Value        = Math.Abs(Value);
-		int     Pow  = (int)(Math.Log2(Value) / Math.Log2(Base));
-		short[] Nums = new short[Pow +1];
+		short[] Nums = new short[Powr +1];
 		// ¶ Convertion:
-		for(int i = Pow; i >= 0; i--){
+		int j = 0;
+		for(int i = Powr; i >= 0; i--){
 			short Temp = (short)(Value / Math.Pow(Base, i));
 			Value     -= (long)(Temp * Math.Pow(Base, i));
-			Nums[i]    = Temp;
+			Nums[j++]  = Temp;
 		}
 		// Return:
 		return Nums;
@@ -292,19 +320,22 @@ public class NX{
 	// *** Cleaners:
 	public void CBCleanUp(){
 		while(this.IsOverLoaded()){
-			if(this[^1] >= this.Base){this.Nums = this[0 .. (this.Size +1)];}
-			else if(this[^1] < 0){
+			if(this[0] >= this.Base){
+				this.Nums = this[0 .. (this.Size +1)];
+				this.Powr++;
+			}
+			else if(this[0] < 0){
 				for(int i = 0; i < this.Size; i++){this[i] *= -1;}
 				this.CBCleanUp();
 				return;
 			}
-			for(int i = 0; i < this.Size; i++){
+			for(int i = this.Size -1; i >= 0; i++){
 				if(this[i] >= this.Base){
-					this[i +1] += (short)(this[i] / this.Base);
+					this[i -1] += (short)(this[i] / this.Base);
 					this[i]     = (short)(this[i] % this.Base);
 				} else if(this[i] < 0){
-					this[i +1] -= (short)(this[i] / this.Base +1);
-					this[i]     = (short)(this[i] % this.Base);
+					this[i -1] -= (short)(this[i] / this.Base +1);
+					this[i]     = (short)(this[i] % this.Base + this.Base);
 				}
 			}
 		}
@@ -312,9 +343,9 @@ public class NX{
 	public void Simplify(){
 		int L = 0;
 		int R = this.Size -1;
-		while(this.Nums[L] == 0 && L <= R){L++;}
-		while(this.Nums[R] == 0 && R > L){R--;}
+		while(this.Nums[L] == 0 & L <= R){L++;}
+		while(this.Nums[R] == 0 & R > L){R--;}
 		this.Nums  = this.Nums[L .. (R +1)];
-		this.Powr += L;
+		this.Powr -= L;
 	}
 }
