@@ -22,7 +22,6 @@
 //	repository at <https://github.com/Karuljonnai/NumberX>.
 
 using System.Text.RegularExpressions;
-using System.Linq;
 
 namespace NumberX;
 
@@ -232,7 +231,7 @@ public class NX{
 		if(Digits == null){return new short[1]{0};}
 		// ¶ Init:
 		short[] Nums = new short[Digits.Length];
-		if(!BEndian){Digits = (string)Digits.Reverse();}
+		if(!BEndian){Digits = Reverse(Digits);}
 		// ¶ Decoding:
 		for(int i = 0; i < Nums.Length; i++){Nums[i] = (short)B64.IndexOf(Digits[i]);}
 		// Return:
@@ -248,12 +247,12 @@ public class NX{
 			else{Pow = Num.Length - FP -2;}
 		}
 		if(Power == null || Power.Length == 0){return Pow;}
-		if(!BEndian){Power = (string)Power.Reverse();}
 		Power = Power[1 .. ^0];
 		int PowSign = Power[0] == '-' ? -1 : 1;
 		if(Power[0] is '+' or '-'){Power = Power[1 .. ^0];}
 		// ¶ Sums the power:
-		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
+		if(BEndian){Power = Reverse(Power);}
+		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int)Math.Pow(Base, i);}
 		// Return:
 		return Pow;
 	}
@@ -279,6 +278,11 @@ public class NX{
 	internal bool IsOverLoaded(){
 		foreach(short i in this.Nums){if(i < 0 | i > this.Base){return true;}}
 		return false;
+	}
+	private static string Reverse(string Str){
+		char[] Arr = Str.ToCharArray();
+		Array.Reverse(Arr);
+		return new string(Arr);
 	}
 	// *** Cleaners:
 	public void CBCleanUp(){
