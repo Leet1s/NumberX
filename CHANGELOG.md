@@ -6,6 +6,7 @@
 ---
 ## 1.0.0
 * !: Changed Nums to Big Endianness representation, as well as everything that it impacts
+* *: Fixed several errors in string conversion methods of NX
 * *: Parallelized SingleMul
 * +: Newton-Raphson algorithm for the nth root
 ## 0.3.2
