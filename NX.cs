@@ -239,20 +239,19 @@ public class NX{
 		return Nums;
 	}
 	private static int StrPowr(string? Power, in string Num, in byte Base, in bool BEndian){
-		// ¶ Safeguard:
-		if(Power == null || Power.Length == 0){return 0;}
 		// ¶ Init:
-		Power = Power[1 .. ^0];
-		int PowSign = Power[0] == '-' ? -1 : 1;
-		if(Power[0] is '+' or '-'){Power = Power[1 .. ^0];}
 		int FP = Num.IndexOf('.');
 		int Pow;
-		if(FP == -1){Pow = 0;}
+		if(FP == -1){Pow = Num.Length -1;}
 		else{
 			if(BEndian){Pow = FP -1;}
 			else{Pow = Num.Length - FP -2;}
 		}
+		if(Power == null || Power.Length == 0){return Pow;}
 		if(!BEndian){Power = (string)Power.Reverse();}
+		Power = Power[1 .. ^0];
+		int PowSign = Power[0] == '-' ? -1 : 1;
+		if(Power[0] is '+' or '-'){Power = Power[1 .. ^0];}
 		// ¶ Sums the power:
 		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int) Math.Pow(Base, i);}
 		// Return:
