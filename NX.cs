@@ -62,7 +62,7 @@ public class NX{
 		}
 		// ¶ Init:
 		var  Elements = RE.Match(Num).Groups;
-		bool isBE     = ">".Equals(Elements[1].ToString());
+		bool isBE     = ">" == Elements[1].ToString();
 		// ¶ Creates the raw values for the new NX:
 		bool    Sign = StrSign(Elements[2].ToString());
 		short[] Nums = StrNums(Elements[4].ToString() + Elements[5].ToString(), isBE);
@@ -81,8 +81,8 @@ public class NX{
 		// ¶ Init:
 		bool    Sign = Num < 0;
 		short[] Nums = new short[PRECISION];
-		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
 		Num          = Math.Abs(Num);
+		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
 		// ¶ Conversion:
 		int j = 0;
 		for(int i = Powr; i > Powr - PRECISION; i--){
@@ -101,7 +101,7 @@ public class NX{
 		}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		int     Powr = (int)(Math.Log2(Num) / Math.Log2(Base));
+		int     Powr = (int)(Math.Log2(Math.Abs(Num)) / Math.Log2(Base));
 		short[] Nums = ToNums(Num, Base, Powr);
 		// Return:
 		return new NX(Sign, Nums, Base, Powr);
@@ -192,10 +192,10 @@ public class NX{
 		Str += '^' + this.Powr < 0 ? '-' : '+';
 		short[] Pow;
 		if(BEndian){
-			int PowrPow = (int)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+			int PowrPow = (int)(Math.Log2(Math.Abs(this.Powr)) / Math.Log2(this.Base));
 			Pow = ToNums(this.Powr, this.Base, PowrPow);
 		} else{
-			int PowrPow = (int)(Math.Log2(this.LowPow) / Math.Log2(this.Base));
+			int PowrPow = (int)(Math.Log2(Math.Abs(this.LowPow)) / Math.Log2(this.Base));
 			Pow = ToNums(this.LowPow, this.Base, PowrPow);
 		}
 		if(BEndian)
@@ -223,7 +223,7 @@ public class NX{
 		Str += '*' + B64[this.Base];
 		// ¶ Power indicator:
 		Str += '^' + this.Powr < 0 ? '-' : '+';
-		int PowrPow = (int)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+		int PowrPow = (int)(Math.Log2(Math.Abs(this.Powr)) / Math.Log2(this.Base));
 		short[] Pow = ToNums(this.Powr, this.Base, PowrPow);
 		for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
 		// Return
