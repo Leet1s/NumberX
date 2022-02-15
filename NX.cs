@@ -178,7 +178,7 @@ public class NX{
 		// ¶ Endianness indicator:
 		string Str = BEndian ? ">" : "<";
 		// ¶ Sign indicator:
-		Str += this.Sign ? '-' : '+';
+		Str += this.Sign ? "-" : "+";
 		// ¶ Digits sequence:
 		if(BEndian)
 			for(int i = 0; i < this.Size; i++)
@@ -187,9 +187,9 @@ public class NX{
 			for(int i = this.Size; --i >= 0;)
 				Str  += B64[this[i]];
 		// ¶ Base indicator:
-		Str += '*' + B64[this.Base];
+		Str += "*" + B64[this.Base];
 		// ¶ Power indicator:
-		Str += '^' + this.Powr < 0 ? '-' : '+';
+		Str += "^" + (this.Powr < 0 ? "-" : "+");
 		short[] Pow;
 		if(BEndian){
 			uint PowrPow = (uint)(Math.Log2(this.Powr) / Math.Log2(this.Base));
@@ -216,15 +216,15 @@ public class NX{
 		// ¶ Endianness indicator:
 		string Str = ">";
 		// ¶ Sign indicator:
-		Str += this.Sign ? '-' : '+';
+		Str += this.Sign ? "-" : "+";
 		// ¶ Digits sequence:
-		Str += B64[this[0]] + '.';
+		Str += B64[this[0]] + ".";
 		int Len = Math.Min(this.Size, Digits);
 		for(int i = 1; i < Len; i++){Str += B64[this[i]];}
 		// ¶ Base indicator:
-		Str += '*' + B64[this.Base];
+		Str += "*" + B64[this.Base];
 		// ¶ Power indicator:
-		Str += '^' + this.Powr < 0 ? '-' : '+';
+		Str += "^" + (this.Powr < 0 ? "-" : "+");
 		uint PowrPow = (uint)(Math.Log2(this.Powr) / Math.Log2(this.Base));
 		short[] Pow = ToNums(this.Powr, this.Base, PowrPow);
 		for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
