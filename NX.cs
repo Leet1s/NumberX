@@ -25,18 +25,22 @@ using System.Text.RegularExpressions;
 
 namespace NumberX;
 
+[Serializable]
 public class NX{
 	// *** Global:
-	internal volatile static ushort PRECISION = 32;
+	internal static ushort PRECISION = 32;
+	internal static byte   DFLT_BASE = 10;
 	// § Regex:
-	private const string B64     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#";
-	private const string Pattern = @$"^([<>])([+-])?(([{B64}]*)[,\.]?([{B64}]*))(\*[2-9a-zA-Z@#])(\^[+-]?[{B64}]+)?$";
-	private static Regex RE      = new Regex(Pattern);
+	private const string B64    = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#";
+	private const string B64Pat = @$"^([<>])([+-])?(([{B64}]*)[,\.]?([{B64}]*))(\*[{B64}])?(\^[+-]?[{B64}]+)?$";
+	private static Regex B64RE  = new(B64Pat);
+	private const string NXON   = @"^{\n?\t?Base: ?([\d]{1,3}),\n?\t?Sign: ?(True|False),\n?\t?Powr: ?(-?\+?\d{1,8}),\n?\t?Nums: ?\[\n?((?:\t?\t?\d{1,3},\n?)*)(\t?\t?\d{1,3})\n?\t?\]\n?}";
+	private static Regex NXONRE = new(NXON);
 	// *** Self attributes:
+	internal byte    Base = DFLT_BASE;
 	internal bool    Sign = false;
-	internal short[] Nums = {0};
-	internal byte    Base = 2;
 	internal int     Powr = 0;
+	internal short[] Nums = {0};
 	// *** Raw constructors:
 	internal NX(in bool Sign, in short[] Digits, in byte Base, in int Power){
 		this.Sign = Sign;
@@ -52,31 +56,44 @@ public class NX{
 	}
 	internal NX(){}
 	// *** Builders:
-	// * String B62 Builder
-	public static NX New(in string Num){
-		// ¶ Safeguard (Checks for correct usage of syntax):
-		if(!RE.IsMatch(Num)){
+	// § String Builders:
+	// * String B64 Builder
+	public static NX FromB64(in string Num){
+		// ¶ Safeguard:
+		if(!B64RE.IsMatch(Num)){
 			Console.Error.WriteLine("\tError:\nThe creation of a NX was attempted and failed: Syntax error.");
-			return null!;
+			throw new B64SyntaxError();
 		}
 		// ¶ Init:
-		var  Elements = RE.Match(Num).Groups;
-		bool isBE     = ">" == Elements[1].ToString();
-		// ¶ Creates the raw values for the new NX:
-		bool    Sign = StrSign(Elements[2].ToString());
-		short[] Nums = StrNums(Elements[4].ToString() + Elements[5].ToString(), isBE);
-		byte    Base = (byte) B64.IndexOf(Elements[6].ToString()[1]);
-		int     Powr = StrPowr(Elements[7].ToString(),  Elements[3].ToString(), Base, isBE);
-		// Return:
+		var Elements = B64RE.Match(Num).Groups;
+		bool    isBE = "<" !=  Elements[1].ToString();
+		bool    Sign = B64Sign(Elements[2].ToString());
+		short[] Nums = B64Nums(Elements[4].ToString() + Elements[5].ToString(), isBE);
+		byte    Base = B64Base(Elements[6].ToString());
+		int     Powr = B64Powr(Elements[7].ToString(),  Elements[3].ToString(), Base, isBE);
+		// Return
 		return new NX(Sign, Nums, Base, Powr);
 	}
-	// * Floating point builder
-	public static NX New(double Num, in byte Base = 2){
+	public static NX FromJSON(in string Num){
 		// ¶ Safeguard:
-		if(Base < 2){
-			Console.Error.WriteLine("\tError:\nAttempted to create a NX at an invalid base!");
-			return null!;
+		if(!NXONRE.IsMatch(Num)){
+			Console.Error.WriteLine("\tError:\nThe creation of a NX was attempted and failed: Syntax error.");
+			throw new NXONSyntaxError();
 		}
+		// ¶ Init:
+		var Elements = NXONRE.Match(Num).Groups;
+		byte    Base = NXONBase(Elements[1].ToString());
+		bool    Sign = NXONSign(Elements[2].ToString());
+		int     Powr = NXONPowr(Elements[3].ToString());
+		short[] Nums = NXONNums(Elements[4].ToString() + Elements[5].ToString());
+		// Return
+		return new NX(Sign, Nums, Base, Powr);
+	}
+	// § Number Builders:
+	// * Floating point builder
+	public static NX FromDouble(double Num, byte Base = 0){
+		// ¶ Safeguard:
+		if(Base < 2){Base = DFLT_BASE;}
 		// ¶ Init:
 		bool    Sign = Num < 0;
 		short[] Nums = new short[PRECISION];
@@ -93,14 +110,12 @@ public class NX{
 		return new NX(Sign, Nums, Base, Powr);
 	}
 	// * Integer builder
-	public static NX New(in long Num, in byte Base = 2){
+	public static NX FromLong(in long Num, byte Base = 0){
 		// ¶ Safeguard:
-		if(Base < 2){
-			Console.Error.WriteLine("\tError:\nAttempted to create a NX at an invalid base!");
-		}
+		if(Base < 2){Base = DFLT_BASE;}
 		// ¶ Init:
 		bool    Sign = Num < 0;
-		uint    Powr = (uint)(Math.Log2(Num) / Math.Log2(Base));
+		uint    Powr = (uint)Math.Abs((Math.Log2(Num) / Math.Log2(Base)));
 		short[] Nums = ToNums(Num, Base, Powr);
 		// Return:
 		return new NX(Sign, Nums, Base, (int)Powr);
@@ -108,51 +123,66 @@ public class NX{
 	// *** Getters & Setters:
 	// § Getters:
 	public int Size => this.Nums.Length;
-	public static ushort GetPrecision() => PRECISION;
 	public int LowPow => this.Powr - this.Size +1;
+	public static ushort GetPrecision() => PRECISION;
+	public static byte GetDefaultBase() => DFLT_BASE;
 	// § Setters:
 	public static void SetPrecision(ushort Precision){
 		PRECISION = Precision;
 		Console.WriteLine("\tWarning:\nThe Precision was altered; having the precision set too high will plummet the performance. Use it at your own risk. The recommended precision range is 15<->100.");
 	}
+	public static void SetDefaultBase(byte Base){
+		if(Base < 2){
+			Console.WriteLine("\tWarning:\nInvalid base; changes not applied!");
+			return;
+		}
+		DFLT_BASE = Base;
+	}
 	// *** Indexers
-	public short this[in int Index]{
+	public   short this[in int Index]{
 		get{
 			if(Index < 0 || Index >= this.Size){return 0;}
 			return this.Nums[Index];
 		}
 		set => this.Nums[Index] = value;
 	}
-	public short this[in Index Index]{
-		get => this[Index.Value];
-		set => this[Index.Value] = value;
+	public   short this[in Index Index]{
+		get{
+			int Val = Index.IsFromEnd ? this.Size - Index.Value : Index.Value;
+			return this[Val];
+		}
+		set{
+			int  Val  = Index.IsFromEnd ? this.Size - Index.Value : Index.Value;
+			this[Val] = value;
+		}
 	}
-	public short[] this[in int Start, in int End]{
+	internal short[] this[in int Start, in int End]{
 		get => this.Nums[Start .. End];
 	}
-	public short[] this[in System.Range Range]{
+	public   short[] this[in System.Range Range]{
 		get{
+			int     Start  = Range.Start.Value;
+			int     End    = Range.End.IsFromEnd ? this.Size - Range.End.Value : Range.End.Value;
 			short[] Result = new short[Range.End.Value - Range.Start.Value];
-			int j = 0;
-			for(int i = Range.Start.Value; i < Range.End.Value; i++){Result[j++] = this[i];}
+			for(int i = Start , j = 0; i < End; i++, j++){Result[j] = this[i];}
 			return Result;
 		}
 	}
 	// *** Operator methods:
 	public static NX operator <<(in NX Num, in int Shift) => Num.ShiftPow(Shift);
 	public static NX operator >>(in NX Num, in int Shift) => Num.ShiftPow(-Shift);
-	public static NX operator ++(NX Num) => Num = MathY.Increment(Num);
-	public static NX operator --(NX Num) => Num = MathY.Decrement(Num);
-	public static NX operator ~(in NX Num) => MathY.RecSB(Num);
-	public static NX operator !(in NX Num) => MathY.FacSB(Num);
-	public static NX operator +(in NX Num) => Num;
-	public static NX operator -(in NX Num) => MathY.Negate(Num);
-	public static NX operator +(in NX A, in NX B) => MathY.SumSB(A, B);
-	public static NX operator -(in NX A, in NX B) => MathY.SumSB(A, -B);
-	public static NX operator *(in NX A, in NX B) => MathY.Mul(A, B);
-	public static NX operator /(in NX A, in NX B) => MathY.DivSB(A, B);
-	public static NX operator %(in NX A, in NX B) => MathY.ModSB(A, B);
-	public static NX operator ^(in NX A, in NX B) => MathY.PowSQ(A, B);
+	public static NX operator ++(in NX Num) => MathY.Increment(Num);
+	public static NX operator --(in NX Num) => MathY.Decrement(Num);
+	public static NX operator  ~(in NX Num) => MathY.RecSB(Num);
+	public static NX operator  !(in NX Num) => MathY.FacSB(Num);
+	public static NX operator  +(in NX Num) => Num;
+	public static NX operator  -(in NX Num) => MathY.Negate(Num);
+	public static NX operator  +(in NX A, in NX B) => MathY.SumSB(A, B);
+	public static NX operator  -(in NX A, in NX B) => MathY.SumSB(A, -B);
+	public static NX operator  *(in NX A, in NX B) => MathY.Mul(A, B);
+	public static NX operator  /(in NX A, in NX B) => MathY.DivSB(A, B);
+	public static NX operator  %(in NX A, in NX B) => MathY.ModSB(A, B);
+	public static NX operator  ^(in NX A, in NX B) => MathY.PowSQ(A, B);
 	// § Comparators:
 	public static bool operator ==(in NX A, in NX B) => MathY.Compare(A, B) == MathY.COMP.SAME;
 	public static bool operator !=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.SAME;
@@ -160,14 +190,23 @@ public class NX{
 	public static bool operator  <(in NX A, in NX B) => MathY.Compare(A, B) == MathY.COMP.LESS;
 	public static bool operator >=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.LESS;
 	public static bool operator <=(in NX A, in NX B) => MathY.Compare(A, B) != MathY.COMP.MORE;
-	public static bool operator  &(in NX A, in NX B) => A.Base != B.Base;
+	public static bool operator  &(in NX A, in NX B) => A.Base == B.Base;
 	public static bool operator  |(in NX A, in NX B) => A.Base == 0 | B.Base == 0;
 	public override bool Equals(object? Obj) => ReferenceEquals(this, Obj);
 	public override int GetHashCode() => base.GetHashCode();
 	// *** Conversion:
-	public override string ToString() => this.ToStrB64();
+	public override string ToString() => this.ToStrJSON();
 	public static explicit operator double(in NX Num) => Num.ToDouble();
 	public static explicit operator long(in NX Num) => Num.ToLong();
+	public static implicit operator bool(in NX? Num) => !ReferenceEquals(Num, null);
+	public static explicit operator NX(in short Num){
+		return new NX{
+			Sign = Num < 0,
+			Nums = new short[]{Math.Abs(Num)},
+			Base = 0,
+			Powr = 0
+		};
+	}
 	public string ToStrB64(in int Digits = int.MaxValue){
 		// ¶ Safeguard:
 		if(this.Base > 64){
@@ -186,11 +225,26 @@ public class NX{
 		Str += "*" + B64[this.Base];
 		// ¶ Power indicator:
 		Str += "^" + (this.Powr < 0 ? "-" : "+");
-		uint PowrPow = (uint)(Math.Log2(this.Powr) / Math.Log2(this.Base));
+		uint PowrPow = (uint)Math.Abs((Math.Log2(this.Powr) / Math.Log2(this.Base)));
 		short[] Pow = ToNums(this.Powr, this.Base, PowrPow);
 		for(int i = 0; i < Pow.Length; i++){Str += B64[Pow[i]];}
 		// Return
 		return Str;
+	}
+	public string ToStrJSON(bool Pretty = true){
+		if(!Pretty){return this.ToStrJSONCompact();}
+		// ¶ Init:
+		this.Fix();
+		string Digits = string.Join(",\n\t\t", this.Nums);
+		// Return
+		return $"{{\n\tBase: {this.Base},\n\tSign: {this.Sign},\n\tPowr: {this.Powr},\n\tNums: [\n\t\t{Digits}\n\t]\n}}";
+	}
+	private string ToStrJSONCompact(){
+		// ¶ Init:
+		this.Fix();
+		string Digits = string.Join(",", this.Nums);
+		// Return
+		return $"{{Base:{this.Base},Sign:{this.Sign},Powr:{this.Powr},Nums:[{Digits}]}}";
 	}
 	public double ToDouble(){
 		// ¶ Init:
@@ -205,28 +259,29 @@ public class NX{
 		// ¶ Init:
 		long Value = 0;
 		long Sign  = this.Sign ? -1 : 1;
-		(_, int HB) = MathY.PowerBounds(this);
-		if(HB < 0){return Value;}
 		// ¶ Sum of Nums:
-		for(int i = 0; i <= HB; i++){Value += Sign * this.NumAtPow(i) * (long)Math.Pow(this.Base, i);}
+		for(int i = 0; i <= this.Powr; i++){Value += Sign * this.NumAtPow(i) * (long)Math.Pow(this.Base, i);}
 		// Return:
 		return Value;
 	}
 	// *** Miscellaneous methods:
-	internal NX Based(in byte NewBase) => new NX(this){Base = NewBase};
-	internal NX Based(in NX Num) => new NX(this){Base = Num.Base};
+	internal NX InBase(in byte NewBase) => new NX(this){Base = NewBase};
+	internal NX InBase(in NX Num) => new NX(this){Base = Num.Base};
 	internal NX Signed(in bool NewSign) => new NX(this){Sign = NewSign};
 	internal NX ShiftPow(in int Shift){
 		NX Temp    = new NX(this);
 		Temp.Powr += Shift;
 		return Temp;
 	}
-	internal short NumAtPow(in int Pow) => this[this.Powr - Pow];
 	internal NX Segment(in int Start, in int End) => new NX(this.Sign, this[Start .. End], this.Base, this.Powr - Start);
 	internal NX Segment(in Range range) => new NX(this.Sign, this[range], this.Base, this.Powr - range.Start.Value);
+	internal NX Cut() => this.Segment(0, PRECISION);
+	internal short NumAtPow(in int Pow) => this[this.Powr - Pow];
+	internal int IndexAtPow(in int Pow) => this.Powr - Pow;
+	internal int PowAtIndex(in int Ind) => this.Powr - Ind;
 	// § Helper Functions:
-	private static bool StrSign(in string Sign) => "-".Equals(Sign);
-	private static short[] StrNums(string Digits, in bool BEndian){
+	private static bool    B64Sign(in string Sign) => "-".Equals(Sign);
+	private static short[] B64Nums(string Digits, in bool BEndian){
 		// ¶ Safeguard:
 		if(Digits == null){return new short[1]{0};}
 		// ¶ Init:
@@ -237,7 +292,13 @@ public class NX{
 		// Return:
 		return Nums;
 	}
-	private static int StrPowr(string? Power, in string Num, in byte Base, in bool BEndian){
+	private static byte    B64Base(in string Base){
+		if(Base.Length == 0){return DFLT_BASE;}
+		int Index = B64.IndexOf(Base[1]);
+		if(Index < 2){return DFLT_BASE;}
+		return (byte)Index;
+	}
+	private static int     B64Powr(string Power, in string Num, in byte Base, in bool BEndian){
 		// ¶ Init:
 		int FP = Num.IndexOf('.');
 		int Pow;
@@ -246,7 +307,7 @@ public class NX{
 			if(BEndian){Pow = FP -1;}
 			else{Pow = Num.Length - FP -2;}
 		}
-		if(Power == null || Power.Length == 0){return Pow;}
+		if(Power.Length == 0){return Pow;}
 		Power = Power[1 .. ^0];
 		int PowSign = Power[0] == '-' ? -1 : 1;
 		if(Power[0] is '+' or '-'){Power = Power[1 .. ^0];}
@@ -255,6 +316,18 @@ public class NX{
 		for(int i = 0; i < Power.Length; i++){Pow += PowSign * B64.IndexOf(Power[i]) * (int)Math.Pow(Base, i);}
 		// Return:
 		return Pow;
+	}
+	private static byte    NXONBase(in string Base) => byte.Parse(Base);
+	private static bool    NXONSign(in string Sign) => "False".Equals(Sign);
+	private static int     NXONPowr(in string Powr) => int.Parse(Powr);
+	private static short[] NXONNums(in string Nums){
+		// ¶ Init:
+		string[] Digits  = Nums.Split(',', StringSplitOptions.TrimEntries);
+		short[]  Numbers = new short[Digits.Length];
+		// ¶ Assignment:
+		for(int i = 0; i < Numbers.Length; i ++){Numbers[i] = short.Parse(Digits[i]);}
+		// Return
+		return Numbers;
 	}
 	private static short[] ToNums(long Value, in byte Base, in uint Powr){
 		// ¶ Safeguard:
@@ -266,11 +339,10 @@ public class NX{
 		Value        = Math.Abs(Value);
 		short[] Nums = new short[Powr +1];
 		// ¶ Convertion:
-		int j = 0;
-		for(uint i = Powr; i >= 0; i--){
+		for(uint i = Powr, j = 0; i >= 0; i--, j++){
 			short Temp = (short)(Value / Math.Pow(Base, i));
 			Value     -= (long)(Temp * Math.Pow(Base, i));
-			Nums[j++]  = Temp;
+			Nums[j]    = Temp;
 		}
 		// Return:
 		return Nums;
@@ -286,15 +358,16 @@ public class NX{
 	}
 	// *** Cleaners:
 	public void CBCleanUp(){
+		if(this.Base == 0){return;}
 		while(this.IsOverLoaded()){
+			Restart:
 			if(this[0] >= this.Base){
-				this.Nums = this[0 .. (this.Size +1)];
+				this.Nums = this[-1 .. this.Size];
 				this.Powr++;
 			}
 			else if(this[0] < 0){
 				for(int i = 0; i < this.Size; i++){this[i] *= -1;}
-				this.CBCleanUp();
-				return;
+				goto Restart;
 			}
 			for(int i = this.Size -1; i >= 0; i++){
 				if(this[i] >= this.Base){
@@ -314,5 +387,9 @@ public class NX{
 		while(this.Nums[R] == 0 & R > L){R--;}
 		this.Nums  = this.Nums[L .. (R +1)];
 		this.Powr -= L;
+	}
+	public void Fix(){
+		this.Simplify();
+		this.CBCleanUp();
 	}
 }
