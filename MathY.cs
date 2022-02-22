@@ -22,7 +22,6 @@
 //	repository at <https://github.com/Karuljonnai/NumberX>.
 
 using System.Threading.Tasks;
-
 using System.Runtime.CompilerServices;
 
 namespace NumberX;
