@@ -4,6 +4,8 @@
 * Current Version: 0.2.1
 * [GitHub Repository](https://github.com/Karuljonnai/NumberX/)
 ---
+## 1.1.1
+* *: Changed JSON read & write to comply with standards
 ## 1.1.0
 * *: Relaxed B64 syntax; now only the number itself is obligatory in the string builder
 * *: Changeable default base for cases were the base is invalid or not specified

@@ -34,7 +34,7 @@ public class NX{
 	private const string B64    = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#";
 	private const string B64Pat = @$"^([<>])([+-])?(([{B64}]*)[,\.]?([{B64}]*))(\*[{B64}])?(\^[+-]?[{B64}]+)?$";
 	private static Regex B64RE  = new(B64Pat);
-	private const string NXON   = @"^{\n?\t?Base: ?([\d]{1,3}),\n?\t?Sign: ?(True|False),\n?\t?Powr: ?(-?\+?\d{1,8}),\n?\t?Nums: ?\[\n?((?:\t?\t?\d{1,3},\n?)*)(\t?\t?\d{1,3})\n?\t?\]\n?}";
+	private const string NXON   = @"^{\n?\t?""Base"": ?([\d]{1,3}),\n?\t?""Sign"": ?(True|False),\n?\t?""Powr"": ?(-?\+?\d{1,8}),\n?\t?""Nums"": ?\[\n?((?:\t?\t?\d{1,3},\n?)*)(\t?\t?\d{1,3})\n?\t?\]\n?}";
 	private static Regex NXONRE = new(NXON);
 	// *** Self attributes:
 	internal byte    Base = DFLT_BASE;
@@ -237,14 +237,14 @@ public class NX{
 		this.Fix();
 		string Digits = string.Join(",\n\t\t", this.Nums);
 		// Return
-		return $"{{\n\tBase: {this.Base},\n\tSign: {this.Sign},\n\tPowr: {this.Powr},\n\tNums: [\n\t\t{Digits}\n\t]\n}}";
+		return $"{{\n\t\"Base\": {this.Base},\n\t\"Sign\": {this.Sign},\n\t\"Powr\": {this.Powr},\n\t\"Nums\": [\n\t\t{Digits}\n\t]\n}}";
 	}
 	private string ToStrJSONCompact(){
 		// ¶ Init:
 		this.Fix();
 		string Digits = string.Join(",", this.Nums);
 		// Return
-		return $"{{Base:{this.Base},Sign:{this.Sign},Powr:{this.Powr},Nums:[{Digits}]}}";
+		return $"{{\"Base\":{this.Base},\"Sign\":{this.Sign},\"Powr\":{this.Powr},\"Nums\":[{Digits}]}}";
 	}
 	public double ToDouble(){
 		// ¶ Init:
